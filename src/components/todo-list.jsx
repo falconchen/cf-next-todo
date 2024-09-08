@@ -61,8 +61,38 @@ export function TodoList() {
           'Authorization': 'Bearer user123' // 模拟用户认证
         }
       })
-      const tasks = await response.json()
-      setTasks(tasks)
+      const serverTasks = await response.json()
+      
+      // 获取本地存储的任务
+      const localTasks = JSON.parse(localStorage.getItem("tasks") || '[]')
+      
+      // 合并服务器和本地任务
+      const mergedTasks = serverTasks.map(serverTask => {
+        const localTask = localTasks.find(task => task.id === serverTask.id)
+        return localTask || serverTask
+      })
+      
+      // 添加本地存在但服务器上不存在的任务
+      localTasks.forEach(localTask => {
+        if (!mergedTasks.some(task => task.id === localTask.id)) {
+          mergedTasks.push(localTask)
+        }
+      })
+      
+      // 更新状态和本地存储
+      setTasks(mergedTasks)
+      localStorage.setItem("tasks", JSON.stringify(mergedTasks))
+      
+      // 将合并后的任务同步到服务器
+      await fetch('/api/todos', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer user123' // 模拟用户认证
+        },
+        body: JSON.stringify(mergedTasks)
+      })
+      
       showNotification("您的任务已与服务器同步。", "success")
     } catch (error) {
       showNotification("同步任务时出错。请重试。", "error")
