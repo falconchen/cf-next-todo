@@ -55,59 +55,110 @@ export function TodoList() {
   const syncTasks = async () => {
     setIsLoading(true)
     try {
-      await syncWithServer(tasks)
-      showNotification("Your tasks have been synced with the server.", "success")
+      const response = await fetch('/api/todos', {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Bearer user123' // 模拟用户认证
+        }
+      })
+      const tasks = await response.json()
+      setTasks(tasks)
+      showNotification("您的任务已与服务器同步。", "success")
     } catch (error) {
-      showNotification("There was an error syncing your tasks. Please try again.", "error")
+      showNotification("同步任务时出错。请重试。", "error")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const addTask = () => {
+  const addTask = async () => {
     if (newTask.trim() !== "") {
-      const updatedTasks = [
-        ...tasks,
-        {
-          id: Date.now(),
-          text: newTask,
-          completed: false,
-          createdAt: Date.now()
+      const newTaskObj = {
+        id: Date.now(),
+        text: newTask,
+        completed: false,
+        createdAt: Date.now()
+      }
+      try {
+        const response = await fetch('/api/todos', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer user123' // 模拟用户认证
+          },
+          body: JSON.stringify(newTaskObj)
+        })
+        if (response.ok) {
+          const updatedTasks = [...tasks, newTaskObj]
+          setTasks(updatedTasks)
+          setNewTask("")
+          setActiveTab("active")
+          showNotification("任务添加成功！", "success")
+        } else {
+          throw new Error('添加任务失败')
         }
-      ]
-      setTasks(updatedTasks)
-      saveTasksToLocalStorage(updatedTasks)
-      setNewTask("")
-      setActiveTab("active") // Switch to the 'Active' tab after adding a task
-      showNotification("Task added successfully!", "success")
+      } catch (error) {
+        showNotification("添加任务时出错。请重试。", "error")
+      }
     }
   }
 
-  const toggleTask = (id) => {
-    const updatedTasks = tasks.map(task =>
-      task.id === id
-        ? {
-            ...task,
-            completed: !task.completed,
-            completedAt: task.completed ? undefined : Date.now()
-          }
-        : task)
-    setTasks(updatedTasks)
-    saveTasksToLocalStorage(updatedTasks)
+  const toggleTask = async (id) => {
+    const taskToToggle = tasks.find(task => task.id === id)
+    if (taskToToggle) {
+      const updatedTask = {
+        ...taskToToggle,
+        completed: !taskToToggle.completed,
+        completedAt: taskToToggle.completed ? undefined : Date.now()
+      }
+      try {
+        const response = await fetch('/api/todos', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer user123' // 模拟用户认证
+          },
+          body: JSON.stringify(updatedTask)
+        })
+        if (response.ok) {
+          const updatedTasks = tasks.map(task => task.id === id ? updatedTask : task)
+          setTasks(updatedTasks)
+        } else {
+          throw new Error('更新任务失败')
+        }
+      } catch (error) {
+        showNotification("更新任务时出错。请重试。", "error")
+      }
+    }
   }
 
-  const deleteTask = (id) => {
-    const taskToDelete = tasks.find(task => task.id === id)
-    if (taskToDelete) {
-      const updatedDeletedTask = { ...taskToDelete, deletedAt: Date.now() }
-      const updatedDeletedTasks = [...deletedTasks, updatedDeletedTask]
-      setDeletedTasks(updatedDeletedTasks)
-      saveDeletedTasksToLocalStorage(updatedDeletedTasks)
+  const deleteTask = async (id) => {
+    try {
+      const response = await fetch('/api/todos', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer user123' // 模拟用户认证
+        },
+        body: JSON.stringify({ id })
+      })
+      if (response.ok) {
+        const taskToDelete = tasks.find(task => task.id === id)
+        if (taskToDelete) {
+          const updatedDeletedTask = { ...taskToDelete, deletedAt: Date.now() }
+          const updatedDeletedTasks = [...deletedTasks, updatedDeletedTask]
+          setDeletedTasks(updatedDeletedTasks)
+          saveDeletedTasksToLocalStorage(updatedDeletedTasks)
 
-      const updatedTasks = tasks.filter(task => task.id !== id)
-      setTasks(updatedTasks)
-      saveTasksToLocalStorage(updatedTasks)
-      showNotification("Task deleted successfully!", "success")
+          const updatedTasks = tasks.filter(task => task.id !== id)
+          setTasks(updatedTasks)
+          showNotification("任务删除成功！", "success")
+        }
+      } else {
+        throw new Error('删除任务失败')
+      }
+    } catch (error) {
+      showNotification("删除任务时出错。请重试。", "error")
     }
   }
 
