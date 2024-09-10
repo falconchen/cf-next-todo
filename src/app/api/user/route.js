@@ -20,7 +20,7 @@ export async function GET(request) {
 
   if (!userData) {
     return new Response(JSON.stringify({ error: 'Session not found' }), {
-      status: 404,
+      status: 401,
       headers: { 'Content-Type': 'application/json' },
     });
   }

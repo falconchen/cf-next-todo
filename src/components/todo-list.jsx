@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Trash2, RefreshCw, LogIn, LogOut, Clock } from "lucide-react"
 import { LoginForm } from "./login-form"
-
+import { ToastContainer, useNotification } from '@/components/ui/notification'
 
 export function TodoList({ onLogin }) {
   const [tasks, setTasks] = useState([])
@@ -17,7 +17,7 @@ export function TodoList({ onLogin }) {
   const [user, setUser] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isLoginOpen, setIsLoginOpen] = useState(false)
-  const [notification, setNotification] = useState(null)
+  const showNotification = useNotification();
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -26,8 +26,6 @@ export function TodoList({ onLogin }) {
       localStorage.removeItem('githubLoggingIn');
       localStorage.setItem('sessionToken', sessionToken);
       fetchUserData(sessionToken).then(userData => {
-        setUser(userData);
-        //onLogin(userData.login, "github", userData.avatar_url);
         handleLogin(userData.username, "github");
       });
       window.history.replaceState({}, document.title, "/");
@@ -36,7 +34,9 @@ export function TodoList({ onLogin }) {
       const storedSessionToken = localStorage.getItem('sessionToken');
       if (storedSessionToken) {
         fetchUserData(storedSessionToken).then(userData => {
-          setUser(userData);
+          if (userData) {
+            setUser(userData);
+          }
         });
       }
     }
@@ -50,22 +50,31 @@ export function TodoList({ onLogin }) {
     if (storedDeletedTasks) {
       setDeletedTasks(JSON.parse(storedDeletedTasks))
     }
-    // const storedUser = localStorage.getItem("user")
-    // if (storedUser) {
-    //   setUser(JSON.parse(storedUser))
-    // }
+
   }, [])
 
   const fetchUserData = async (sessionToken) => {
-    const response = await fetch('/api/user', {
-      headers: {
-        'Authorization': `Bearer ${sessionToken}`,
-      },
-    });
-    if (response.ok) {
-      return await response.json();
-    } else {
-      throw new Error('Failed to fetch user data');
+    try {
+      const response = await fetch('/api/user', {
+        headers: {
+          'Authorization': `Bearer ${sessionToken}`,
+        },
+      });
+      if (response.ok) {
+        return await response.json();
+      } else if (response.status === 401) {
+        // 会话已过期
+        localStorage.removeItem('sessionToken');
+        setUser(null);
+        showNotification("会话已过期,请重新登录", "error");
+        return null;
+      } else {
+        throw new Error('获取用户数据失败');
+      }
+    } catch (error) {
+      console.error('获取用户数据时出错:', error);
+      showNotification("获取用户数据时出错,请稍后重试", "error");
+      return null;
     }
   }
 
@@ -75,11 +84,6 @@ export function TodoList({ onLogin }) {
 
   const saveDeletedTasksToLocalStorage = (updatedDeletedTasks) => {
     localStorage.setItem("deletedTasks", JSON.stringify(updatedDeletedTasks))
-  }
-
-  const showNotification = (message, type) => {
-    setNotification({ message, type })
-    setTimeout(() => setNotification(null), 3000)
   }
 
   const syncTasks = async () => {
@@ -295,8 +299,10 @@ export function TodoList({ onLogin }) {
     localStorage.removeItem('deletedTasks')
     setTasks([])
     setDeletedTasks([])
-    setUser(null)
+    setUser(null)    
     showNotification("您已成功登出。", "success")
+    // setIsLoginOpen(false)
+    
   }
 
   const handleRegister = async (username, method) => {
@@ -369,12 +375,8 @@ export function TodoList({ onLogin }) {
   return (
     (<div
       className="max-w-4xl mx-auto mt-4 p-4 sm:mt-8 sm:p-6 bg-background rounded-lg shadow-lg">
-      {notification && (
-        <div
-          className={`mb-4 p-2 rounded ${notification.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-          {notification.message}
-        </div>
-      )}
+      
+      <ToastContainer />
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-primary mb-4 sm:mb-0">Todo List</h1>
         <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
@@ -406,7 +408,7 @@ export function TodoList({ onLogin }) {
           type="text"
           value={newTask}
           onChange={(e) => setNewTask(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && addTask()}
+          onKeyDown={(e) => e.key === "Enter" && addTask()}
           placeholder="Add a new task"
           className="mb-2 sm:mb-0 sm:mr-2" />
         <Button onClick={addTask} className="w-full sm:w-auto">Add</Button>
@@ -428,6 +430,7 @@ export function TodoList({ onLogin }) {
         </TabsContent>
       </Tabs>
       {isLoading && <p className="mt-4 text-center">Syncing...</p>}
+      
     </div>)
   );
 }
