@@ -34,7 +34,7 @@ export async function GET(request) {
   if (loginMethod === 'github') {
     // 如果是,从 KV 存储中获取完整的 GitHub 用户数据
     const githubUserData = await env.MY_KV_NAMESPACE.get(`githubuser:${user.id}`);
-    console.log(githubUserData)
+    // console.log(githubUserData)
     if (githubUserData) {
       user.loginMethod = 'github';
       Object.assign(user, JSON.parse(githubUserData));

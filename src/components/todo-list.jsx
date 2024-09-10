@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -9,6 +9,7 @@ import { Trash2, RefreshCw, LogIn, LogOut, Clock } from "lucide-react"
 import { LoginForm } from "./login-form"
 import { ToastContainer, useNotification } from '@/components/ui/notification'
 import Image from 'next/image';
+import debounce from 'lodash/debounce';
 
 export function TodoList({ onLogin }) {
   const [tasks, setTasks] = useState([])
@@ -20,41 +21,7 @@ export function TodoList({ onLogin }) {
   const [isLoginOpen, setIsLoginOpen] = useState(false)
   const showNotification = useNotification();
 
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    const sessionToken = url.searchParams.get('sessionToken');
-    if (sessionToken && localStorage.getItem('githubLoggingIn')) {
-      localStorage.removeItem('githubLoggingIn');
-      localStorage.setItem('sessionToken', sessionToken);
-      fetchUserData(sessionToken).then(userData => {
-        handleLogin(userData.username, "github");
-      });
-      window.history.replaceState({}, document.title, "/");
-    } else {
-      // 检查是否已经登录
-      const storedSessionToken = localStorage.getItem('sessionToken');
-      if (storedSessionToken) {
-        fetchUserData(storedSessionToken).then(userData => {
-          if (userData) {
-            setUser(userData);
-          }
-        });
-      }
-    }
-
-    const storedTasks = localStorage.getItem("tasks")
-    if (storedTasks) {
-      setTasks(JSON.parse(storedTasks))
-      
-    }
-    const storedDeletedTasks = localStorage.getItem("deletedTasks")
-    if (storedDeletedTasks) {
-      setDeletedTasks(JSON.parse(storedDeletedTasks))
-    }
-
-  }, [])
-
-  const fetchUserData = async (sessionToken) => {
+  const fetchUserData = useCallback(async (sessionToken) => {
     try {
       const response = await fetch('/api/user', {
         headers: {
@@ -77,23 +44,17 @@ export function TodoList({ onLogin }) {
       showNotification("获取用户数据时出错,请稍后重试", "error");
       return null;
     }
-  }
-
-  const saveTasksToLocalStorage = (updatedTasks) => {
-    localStorage.setItem("tasks", JSON.stringify(updatedTasks))
-  }
-
-  const saveDeletedTasksToLocalStorage = (updatedDeletedTasks) => {
-    localStorage.setItem("deletedTasks", JSON.stringify(updatedDeletedTasks))
-  }
+  }, [showNotification]);
 
   const syncTasks = async () => {
-    setIsLoading(true)
+    
     try {
       const sessionToken = localStorage.getItem('sessionToken')
       if (!sessionToken) {
-        throw new Error('未登录')
+        return;
+        // throw new Error('未登录')
       }
+      setIsLoading(true)
       const response = await fetch('/api/todos', {
         method: 'GET',
         headers: {
@@ -151,6 +112,63 @@ export function TodoList({ onLogin }) {
     }
   }
 
+  const debouncedSyncTasks = useCallback(
+    debounce(() => {
+      syncTasks();
+    }, 1000),
+    [syncTasks]
+  );
+
+  const handleLogin = useCallback(async (username, method) => {
+    const newUser = { username, loginMethod: method }
+    setUser(newUser)
+    localStorage.setItem("user", JSON.stringify(newUser))
+    setIsLoginOpen(false)
+    showNotification(`Welcome, ${username}! You've logged in with ${method}.`, "success")
+  }, [showNotification]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const sessionToken = url.searchParams.get('sessionToken');
+    if (sessionToken && localStorage.getItem('githubLoggingIn')) {
+      localStorage.removeItem('githubLoggingIn');
+      localStorage.setItem('sessionToken', sessionToken);
+      fetchUserData(sessionToken).then(userData => {
+        if (userData) {
+          setUser({ username: userData.username, loginMethod: "github" });
+          syncTasks();
+        }
+      });
+      window.history.replaceState({}, document.title, "/");
+    } else {
+      const storedSessionToken = localStorage.getItem('sessionToken');
+      if (storedSessionToken) {
+        fetchUserData(storedSessionToken).then(userData => {
+          if (userData) {
+            setUser(userData);
+          }
+        });
+      }
+    }
+
+    const storedTasks = localStorage.getItem("tasks")
+    if (storedTasks) {
+      setTasks(JSON.parse(storedTasks))
+    }
+    const storedDeletedTasks = localStorage.getItem("deletedTasks")
+    if (storedDeletedTasks) {
+      setDeletedTasks(JSON.parse(storedDeletedTasks))
+    }
+  }, [fetchUserData]);
+
+  const saveTasksToLocalStorage = (updatedTasks) => {
+    localStorage.setItem("tasks", JSON.stringify(updatedTasks))
+  }
+
+  const saveDeletedTasksToLocalStorage = (updatedDeletedTasks) => {
+    localStorage.setItem("deletedTasks", JSON.stringify(updatedDeletedTasks))
+  }
+
   const addTask = async () => {
     if (newTask.trim() !== "") {
       const newTaskObj = {
@@ -190,6 +208,7 @@ export function TodoList({ onLogin }) {
       }
       
       showNotification("任务添加成功！", "success")
+      debouncedSyncTasks();
     }
   }
 
@@ -228,6 +247,7 @@ export function TodoList({ onLogin }) {
           showNotification(error.message || "同步任务到服务器时出错。请稍后重试。", "error")
         }
       }
+      debouncedSyncTasks();
     }
   }
 
@@ -266,6 +286,7 @@ export function TodoList({ onLogin }) {
       }
       
       showNotification("任务删除成功！", "success")
+      debouncedSyncTasks();
     }
   }
 
@@ -281,16 +302,8 @@ export function TodoList({ onLogin }) {
       setDeletedTasks(updatedDeletedTasks)
       saveDeletedTasksToLocalStorage(updatedDeletedTasks)
       showNotification("Task restored successfully!", "success")
+      debouncedSyncTasks();
     }
-  }
-
-  const handleLogin = async (username, method) => {
-    const newUser = { username, loginMethod: method }
-    setUser(newUser)
-    localStorage.setItem("user", JSON.stringify(newUser))
-    setIsLoginOpen(false)
-    showNotification(`Welcome, ${username}! You've logged in with ${method}.`, "success")
-    await syncTasks()
   }
 
   const handleLogout = () => {
