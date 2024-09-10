@@ -8,13 +8,8 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Trash2, RefreshCw, LogIn, LogOut, Clock } from "lucide-react"
 import { LoginForm } from "./login-form"
 
-// Simulated server sync function
-const syncWithServer = async tasks => {
-  console.log("Syncing with server:", tasks)
-  await new Promise(resolve => setTimeout(resolve, 1000))
-}
 
-export function TodoList() {
+export function TodoList({ onLogin }) {
   const [tasks, setTasks] = useState([])
   const [deletedTasks, setDeletedTasks] = useState([])
   const [newTask, setNewTask] = useState("")
@@ -25,19 +20,54 @@ export function TodoList() {
   const [notification, setNotification] = useState(null)
 
   useEffect(() => {
+    const url = new URL(window.location.href);
+    const sessionToken = url.searchParams.get('sessionToken');
+    if (sessionToken && localStorage.getItem('githubLoggingIn')) {
+      localStorage.removeItem('githubLoggingIn');
+      localStorage.setItem('sessionToken', sessionToken);
+      fetchUserData(sessionToken).then(userData => {
+        setUser(userData);
+        //onLogin(userData.login, "github", userData.avatar_url);
+        handleLogin(userData.username, "github");
+      });
+      window.history.replaceState({}, document.title, "/");
+    } else {
+      // 检查是否已经登录
+      const storedSessionToken = localStorage.getItem('sessionToken');
+      if (storedSessionToken) {
+        fetchUserData(storedSessionToken).then(userData => {
+          setUser(userData);
+        });
+      }
+    }
+
     const storedTasks = localStorage.getItem("tasks")
     if (storedTasks) {
       setTasks(JSON.parse(storedTasks))
+      
     }
     const storedDeletedTasks = localStorage.getItem("deletedTasks")
     if (storedDeletedTasks) {
       setDeletedTasks(JSON.parse(storedDeletedTasks))
     }
-    const storedUser = localStorage.getItem("user")
-    if (storedUser) {
-      setUser(JSON.parse(storedUser))
-    }
+    // const storedUser = localStorage.getItem("user")
+    // if (storedUser) {
+    //   setUser(JSON.parse(storedUser))
+    // }
   }, [])
+
+  const fetchUserData = async (sessionToken) => {
+    const response = await fetch('/api/user', {
+      headers: {
+        'Authorization': `Bearer ${sessionToken}`,
+      },
+    });
+    if (response.ok) {
+      return await response.json();
+    } else {
+      throw new Error('Failed to fetch user data');
+    }
+  }
 
   const saveTasksToLocalStorage = (updatedTasks) => {
     localStorage.setItem("tasks", JSON.stringify(updatedTasks))
@@ -55,29 +85,44 @@ export function TodoList() {
   const syncTasks = async () => {
     setIsLoading(true)
     try {
+      const sessionToken = localStorage.getItem('sessionToken')
+      if (!sessionToken) {
+        throw new Error('未登录')
+      }
       const response = await fetch('/api/todos', {
         method: 'GET',
         headers: {
-          'Authorization': 'Bearer user123' // 模拟用户认证
+          'Authorization': `Bearer ${sessionToken}`
         }
       })
+      if (!response.ok) {
+        if (response.status === 401) {
+          // 会话已过期，清除本地存储并提示用户重新登录
+          localStorage.removeItem('sessionToken')
+          setUser(null)
+          throw new Error('会话已过期，请重新登录')
+        }
+        throw new Error('获取任务失败')
+      }
       const serverTasks = await response.json()
       
       // 获取本地存储的任务
       const localTasks = JSON.parse(localStorage.getItem("tasks") || '[]')
       
-      // 合并服务器和本地任务
-      const mergedTasks = serverTasks.map(serverTask => {
-        const localTask = localTasks.find(task => task.id === serverTask.id)
-        return localTask || serverTask
-      })
-      
-      // 添加本地存在但服务器上不存在的任务
-      localTasks.forEach(localTask => {
-        if (!mergedTasks.some(task => task.id === localTask.id)) {
-          mergedTasks.push(localTask)
+      // 合并服务器和本地任务，保留 updatedAt 最大的 item
+      const mergedTasks = [...serverTasks, ...localTasks].reduce((acc, task) => {
+        const getUpdatedAt = (t) => t.updatedAt || Math.max(t.completedAt || 0, t.deletedAt || 0, t.createdAt || 0);
+        const existingTask = acc.find(t => t.id === task.id);
+        if (!existingTask || getUpdatedAt(task) > getUpdatedAt(existingTask)) {
+          const index = acc.findIndex(t => t.id === task.id);
+          if (index !== -1) {
+            acc[index] = { ...task, updatedAt: getUpdatedAt(task) };
+          } else {
+            acc.push({ ...task, updatedAt: getUpdatedAt(task) });
+          }
         }
-      })
+        return acc;
+      }, []);
       
       // 更新状态和本地存储
       setTasks(mergedTasks)
@@ -88,14 +133,14 @@ export function TodoList() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer user123' // 模拟用户认证
+          'Authorization': `Bearer ${sessionToken}`
         },
         body: JSON.stringify(mergedTasks)
       })
       
       showNotification("您的任务已与服务器同步。", "success")
     } catch (error) {
-      showNotification("同步任务时出错。请重试。", "error")
+      showNotification(error.message || "同步任务时出错。请重试。", "error")
     } finally {
       setIsLoading(false)
     }
@@ -107,88 +152,115 @@ export function TodoList() {
         id: Date.now(),
         text: newTask,
         completed: false,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        updatedAt: Date.now()
       }
-      try {
-        const response = await fetch('/api/todos', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer user123' // 模拟用户认证
-          },
-          body: JSON.stringify(newTaskObj)
-        })
-        if (response.ok) {
-          const updatedTasks = [...tasks, newTaskObj]
-          setTasks(updatedTasks)
-          setNewTask("")
-          setActiveTab("active")
-          showNotification("任务添加成功！", "success")
-        } else {
-          throw new Error('添加任务失败')
+      
+      // 更新本地存储
+      const localTasks = JSON.parse(localStorage.getItem("tasks") || '[]')
+      const updatedTasks = [...localTasks, newTaskObj]
+      localStorage.setItem("tasks", JSON.stringify(updatedTasks))
+      setTasks(updatedTasks)
+      setNewTask("")
+      setActiveTab("active")
+      
+      // 检查用户是否登录
+      const sessionToken = localStorage.getItem('sessionToken')
+      if (sessionToken) {
+        try {
+          const response = await fetch('/api/todos', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionToken}`
+            },
+            body: JSON.stringify(newTaskObj)
+          })
+          if (!response.ok) {
+            throw new Error('添加任务到服务器失败')
+          }
+        } catch (error) {
+          showNotification(error.message || "同步任务到服务器时出错。请稍后重试。", "error")
         }
-      } catch (error) {
-        showNotification("添加任务时出错。请重试。", "error")
       }
+      
+      showNotification("任务添加成功！", "success")
     }
   }
 
   const toggleTask = async (id) => {
-    const taskToToggle = tasks.find(task => task.id === id)
+    const localTasks = JSON.parse(localStorage.getItem("tasks") || '[]')
+    const taskToToggle = localTasks.find(task => task.id === id)
     if (taskToToggle) {
       const updatedTask = {
         ...taskToToggle,
         completed: !taskToToggle.completed,
-        completedAt: taskToToggle.completed ? undefined : Date.now()
+        completedAt: taskToToggle.completed ? undefined : Date.now(),
+        updatedAt: Date.now()
       }
-      try {
-        const response = await fetch('/api/todos', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer user123' // 模拟用户认证
-          },
-          body: JSON.stringify(updatedTask)
-        })
-        if (response.ok) {
-          const updatedTasks = tasks.map(task => task.id === id ? updatedTask : task)
-          setTasks(updatedTasks)
-        } else {
-          throw new Error('更新任务失败')
+      
+      // 更新本地存储
+      const updatedTasks = localTasks.map(task => task.id === id ? updatedTask : task)
+      localStorage.setItem("tasks", JSON.stringify(updatedTasks))
+      setTasks(updatedTasks)
+      
+      // 检查用户是否登录
+      const sessionToken = localStorage.getItem('sessionToken')
+      if (sessionToken) {
+        try {
+          const response = await fetch('/api/todos', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionToken}`
+            },
+            body: JSON.stringify(updatedTask)
+          })
+          if (!response.ok) {
+            throw new Error('更新任务到服务器失败')
+          }
+        } catch (error) {
+          showNotification(error.message || "同步任务到服务器时出错。请稍后重试。", "error")
         }
-      } catch (error) {
-        showNotification("更新任务时出错。请重试。", "error")
       }
     }
   }
 
   const deleteTask = async (id) => {
-    try {
-      const response = await fetch('/api/todos', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer user123' // 模拟用户认证
-        },
-        body: JSON.stringify({ id })
-      })
-      if (response.ok) {
-        const taskToDelete = tasks.find(task => task.id === id)
-        if (taskToDelete) {
-          const updatedDeletedTask = { ...taskToDelete, deletedAt: Date.now() }
-          const updatedDeletedTasks = [...deletedTasks, updatedDeletedTask]
-          setDeletedTasks(updatedDeletedTasks)
-          saveDeletedTasksToLocalStorage(updatedDeletedTasks)
-
-          const updatedTasks = tasks.filter(task => task.id !== id)
-          setTasks(updatedTasks)
-          showNotification("任务删除成功！", "success")
+    const localTasks = JSON.parse(localStorage.getItem("tasks") || '[]')
+    const taskToDelete = localTasks.find(task => task.id === id)
+    if (taskToDelete) {
+      // 更新本地存储
+      const updatedTasks = localTasks.filter(task => task.id !== id)
+      localStorage.setItem("tasks", JSON.stringify(updatedTasks))
+      setTasks(updatedTasks)
+      
+      const updatedDeletedTask = { ...taskToDelete, deletedAt: Date.now(), updatedAt: Date.now() }
+      const updatedDeletedTasks = [...deletedTasks, updatedDeletedTask]
+      setDeletedTasks(updatedDeletedTasks)
+      saveDeletedTasksToLocalStorage(updatedDeletedTasks)
+      
+      // 检查用户是否登录
+      const sessionToken = localStorage.getItem('sessionToken')
+      if (sessionToken) {
+        try {
+          const response = await fetch('/api/todos', {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionToken}`
+            },
+            body: JSON.stringify({ id })
+          })
+          if (!response.ok) {
+            throw new Error('从服务器删除任务失败')
+          }
+        } catch (error) {
+          showNotification(error.message || "同步删除任务到服务器时出错。请稍后重试。", "error")
         }
-      } else {
-        throw new Error('删除任务失败')
       }
-    } catch (error) {
-      showNotification("删除任务时出错。请重试。", "error")
+      
+      showNotification("任务删除成功！", "success")
     }
   }
 
@@ -217,14 +289,18 @@ export function TodoList() {
   }
 
   const handleLogout = () => {
+    localStorage.removeItem('sessionToken')
+    localStorage.removeItem('user')
+    localStorage.removeItem('tasks')
+    localStorage.removeItem('deletedTasks')
+    setTasks([])
+    setDeletedTasks([])
     setUser(null)
-    localStorage.removeItem("user")
-    showNotification("You have been successfully logged out.", "success")
+    showNotification("您已成功登出。", "success")
   }
 
   const handleRegister = async (username, method) => {
-    // In a real app, you would send the registration data to your backend
-    // For this example, we'll just log in the user directly
+    
     handleLogin(username, method)
     showNotification(`Welcome, ${username}! Your account has been created.`, "success")
   }

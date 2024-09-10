@@ -13,17 +13,55 @@ export function RegistForm({
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    
     if (username && email && password && confirmPassword) {
       if (password !== confirmPassword) {
-        alert("Passwords do not match.")
+        alert("密码不匹配。")
         return
       }
-      // In a real app, you would send this data to your backend
-      onRegister(username, "password")
+      // 客户端数据验证
+      const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      const passwordRegex = /^.{7,}$/
+
+      if (!usernameRegex.test(username)) {
+        alert("用户名必须是3-20个字符，只能包含字母、数字和下划线。")
+        return
+      }
+      if (!emailRegex.test(email)) {
+        alert("请输入有效的电子邮件地址。")
+        return
+      }
+      if (!passwordRegex.test(password)) {
+        alert("密码必须至少7个字符。")
+        return
+      }
+
+      try {
+        const response = await fetch('/api/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            username: username.trim(), 
+            email: email.trim().toLowerCase(), 
+            password 
+          }),
+        })
+        const data = await response.json()
+        if (response.ok) {
+          onRegister(username, "password")
+        } else {
+          alert(data.error || "注册失败。请重试。")
+        }
+      } catch (error) {
+        alert("发生错误。请重试。")
+      }
     } else {
-      alert("Please fill in all fields.")
+      alert("请填写所有字段。")
     }
   }
 
