@@ -79,10 +79,10 @@ export function LoginForm({
         </p>
       </div>
       <div className="space-y-4">
-        <Button variant="outline" className="w-full" onClick={handleGoogleLogin}>
+        {/* <Button variant="outline" className="w-full" onClick={handleGoogleLogin}>
           <Mail className="mr-2 h-4 w-4" />
           使用 Google 登录
-        </Button>
+        </Button> */}
         <Button variant="outline" className="w-full" onClick={handleGithubLogin}>
           <Github className="mr-2 h-4 w-4" />
           使用 GitHub 登录
