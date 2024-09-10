@@ -4,8 +4,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "CF Next ToDo",
-  description: "Try develop a todo app with Next.js and Cloudflare, Thanks to v0.dev and Cursor.",
+  title: "Next Todo",
+  description: "Yet another todo app, but this time with Next.js and Cloudflare and v0.dev.",
   icons: {
     icon: '/icon.ico',
     apple: '/apple-icon.jpeg',

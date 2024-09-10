@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Trash2, RefreshCw, LogIn, LogOut, Clock } from "lucide-react"
 import { LoginForm } from "./login-form"
 import { ToastContainer, useNotification } from '@/components/ui/notification'
+import Image from 'next/image';
 
 export function TodoList({ onLogin }) {
   const [tasks, setTasks] = useState([])
@@ -377,8 +378,11 @@ export function TodoList({ onLogin }) {
       className="max-w-4xl mx-auto mt-4 p-4 sm:mt-8 sm:p-6 bg-background rounded-lg shadow-lg">
       
       <ToastContainer />
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-primary mb-4 sm:mb-0">Todo List</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-3">
+        <h1 className="text-2xl font-bold text-primary mb-4 sm:mb-0 flex items-center">
+          <Image src="/icon.jpeg" alt="Todo List Icon" width={24} height={24} className="mr-2" />
+          Next Todo
+        </h1>
         <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
           <DialogTrigger asChild>
             {user ? (
@@ -398,9 +402,13 @@ export function TodoList({ onLogin }) {
           </DialogContent>
         </Dialog>
       </div>
-      {user && (
+      {user ? (
         <p className="mb-4 text-center sm:text-left">
           Welcome, {user.username}! (Logged in with {user.loginMethod})
+        </p>
+      ) : (
+        <p className="mb-4 text-center sm:text-left">
+          Yet another todo app, but this time with Next.js and Cloudflare and v0.dev.
         </p>
       )}
       <div className="flex flex-col sm:flex-row mb-4">
