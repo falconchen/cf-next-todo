@@ -21,6 +21,7 @@ export function TodoList() {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoginOpen, setIsLoginOpen] = useState(false)
   const showNotification = useNotification();
+  const [shouldToggle, setShouldToggle] = useState(true);
 
   const fetchUserData = useCallback(async (sessionToken) => {
     try {
@@ -269,8 +270,7 @@ export function TodoList() {
                 !task.completed && !task.deleted ? 'hover:bg-muted/40 group' : ''
               }`}
               onClick={(e) => {
-                // 只有在点击的不是删除按钮时才触发切换完成状态
-                if (!task.completed && !task.deleted && e.target.closest('button') === null) {
+                if (!task.completed && !task.deleted && e.target.closest('button') === null && shouldToggle) {
                   onToggle(task.id);
                 }
               }}
@@ -281,7 +281,11 @@ export function TodoList() {
                     <Checkbox
                       id={`task-${task.id}`}
                       checked={task.completed}
-                      onCheckedChange={() => onToggle(task.id)}
+                      onCheckedChange={() => {
+                        setShouldToggle(false);
+                        onToggle(task.id);
+                        setTimeout(() => setShouldToggle(true), 0);
+                      }}
                       className="mr-2 flex-shrink-0"
                     />
                   )}
@@ -434,14 +438,14 @@ export function TodoList() {
         <Input
           type="text"          
           name="new-task" 
-          autocomplete="new-password" 
+          
           id="new-task"
           value={newTask}
           onChange={(e) => setNewTask(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && addTask()}
           placeholder="添加新任务"
           className="mb-2 sm:mb-0 sm:mr-2"
-          autoComplete="off"
+          autoComplete="new-password"           
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck="false"
