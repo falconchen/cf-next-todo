@@ -11,6 +11,7 @@ import { ToastContainer, useNotification } from '@/components/ui/notification'
 import Image from 'next/image';
 import debounce from 'lodash/debounce';
 import 'github-fork-ribbon-css/gh-fork-ribbon.css'
+import { AnimatePresence, motion } from "framer-motion"
 
 export function TodoList() {
   const [tasks, setTasks] = useState([])
@@ -249,76 +250,112 @@ export function TodoList() {
 
   const renderTasks = (taskList, showCompleted, onToggle, onDelete, onRestore, onPermanentlyDelete) => (
     <ul className="space-y-2">
-      {taskList.map(task => (
-        <li key={task.id} className="bg-muted p-3 rounded-md hover:bg-muted/40 transition-colors duration-200 cursor-pointer group">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center flex-grow mr-2">
-              {showCompleted && (
-                <Checkbox
-                  id={`task-${task.id}`}
-                  checked={task.completed}
-                  onCheckedChange={() => onToggle(task.id)}
-                  className="mr-2 flex-shrink-0" />
-              )}
-              <label
-                htmlFor={`task-${task.id}`}
-                className={`${task.completed ? 'line-through text-muted-foreground' : 'text-foreground'} break-words cursor-pointer group-hover:text-muted-foreground transition-colors duration-200`}>
-                {task.text}
-              </label>
-            </div>
-            <div className="flex items-center justify-end space-x-2">
-              {!task.deleted && onDelete && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onDelete(task.id)}
-                  aria-label={`删除任务: ${task.text}`}
-                  className="flex-shrink-0">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-              {task.deleted && onRestore && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onRestore(task.id)}
-                  aria-label={`恢复任务: ${task.text}`}
-                  className="flex-shrink-0">
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              )}
-              {task.deleted && onPermanentlyDelete && (
-                <Button 
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onPermanentlyDelete(task.id)}
-                  aria-label={`永久删除任务: ${task.text}`}
-                  className="flex-shrink-0 text-red-500 hover:text-red-600">
-                  <Trash2 className="h-4 w-4" />  
-                </Button>
-              )}
-            </div>
-          </div>
-          <div className="text-xs text-muted-foreground space-y-1">
-            <div className="flex items-center">
-              <Clock className="h-3 w-3 mr-1" />
-              创建时间: {formatDate(task.createdAt)}
-            </div>
-            {task.completed && task.completedAt && (
-              <div className="flex items-center">
-                <Clock className="h-3 w-3 mr-1" />
-                完成时间: {formatDate(task.completedAt)}
+      <AnimatePresence>
+        {taskList.map(task => (
+          <li key={task.id} className="list-none">
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.3 }}
+              className={`bg-muted p-3 rounded-md transition-colors duration-200 cursor-pointer mb-2 ${
+                !task.completed && !task.deleted ? 'hover:bg-muted/40 group' : ''
+              }`}
+              onClick={(e) => {
+                // 只有在点击的不是删除按钮时才触发切换完成状态
+                if (!task.completed && !task.deleted && e.target.closest('button') === null) {
+                  onToggle(task.id);
+                }
+              }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center flex-grow mr-2">
+                  {showCompleted && (
+                    <Checkbox
+                      id={`task-${task.id}`}
+                      checked={task.completed}
+                      onCheckedChange={() => onToggle(task.id)}
+                      className="mr-2 flex-shrink-0"
+                    />
+                  )}
+                  <label
+                    htmlFor={`task-${task.id}`}
+                    className={`${
+                      task.completed
+                        ? 'line-through text-muted-foreground'
+                        : 'text-foreground group-hover:line-through'
+                    } break-words cursor-pointer transition-all duration-200`}
+                  >
+                    {task.text}
+                  </label>
+                </div>
+                <div className="flex items-center justify-end space-x-2">
+                  {!task.deleted && onDelete && (
+                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation(); // 阻止事件冒泡
+                          onDelete(task.id);
+                        }}
+                        aria-label={`删除任务: ${task.text}`}
+                        className="flex-shrink-0"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </motion.div>
+                  )}
+                  {task.deleted && onRestore && (
+                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onRestore(task.id)}
+                        aria-label={`恢复任务: ${task.text}`}
+                        className="flex-shrink-0"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                    </motion.div>
+                  )}
+                  {task.deleted && onPermanentlyDelete && (
+                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                      <Button 
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onPermanentlyDelete(task.id)}
+                        aria-label={`永久删除任务: ${task.text}`}
+                        className="flex-shrink-0 text-red-500 hover:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />  
+                      </Button>
+                    </motion.div>
+                  )}
+                </div>
               </div>
-            )}
-            {task.deletedAt && (
-              <div className="flex items-center">
-                <Clock className="h-3 w-3 mr-1" />
-                删除时间: {formatDate(task.deletedAt)}
+              <div className="text-xs text-muted-foreground space-y-1">
+                <div className="flex items-center">
+                  <Clock className="h-3 w-3 mr-1" />
+                  创建时间: {formatDate(task.createdAt)}
+                </div>
+                {task.completed && task.completedAt && (
+                  <div className="flex items-center">
+                    <Clock className="h-3 w-3 mr-1" />
+                    完成时间: {formatDate(task.completedAt)}
+                  </div>
+                )}
+                {task.deletedAt && (
+                  <div className="flex items-center">
+                    <Clock className="h-3 w-3 mr-1" />
+                    删除时间: {formatDate(task.deletedAt)}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </li>
-      ))}
+            </motion.div>
+          </li>
+        ))}
+      </AnimatePresence>
     </ul>
   )
 
@@ -394,7 +431,9 @@ export function TodoList() {
           onKeyDown={(e) => e.key === "Enter" && addTask()}
           placeholder="添加新任务"
           className="mb-2 sm:mb-0 sm:mr-2" />
-        <Button onClick={addTask} className="w-full sm:w-auto">添加</Button>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button onClick={addTask} className="w-full sm:w-auto">添加</Button>
+        </motion.div>
       </div>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
@@ -412,7 +451,7 @@ export function TodoList() {
           {renderTasks(filteredTasks, false, toggleTask, () => {}, restoreTask, permanentlyDeleteTask)}
         </TabsContent>
       </Tabs>
-      <a className="github-fork-ribbon right-bottom fixed" href="https://github.com/yourusername/yourrepository" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</a>
+      <a className="github-fork-ribbon right-bottom fixed" href="https://github.com/yourusername/yourrepository" data-ribbon="在 GitHub 上复刻" title="在 GitHub 上复刻">Fork me on GitHub</a>
     </div>)
   );
 }
