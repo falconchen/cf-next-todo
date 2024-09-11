@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Github, Mail } from "lucide-react"
@@ -7,7 +7,8 @@ import { RegistForm } from "./regist-form"
 
 export function LoginForm({
   onLogin,
-  onRegister
+  onRegister,
+  showNotification
 }) {
   const [isRegistering, setIsRegistering] = useState(false)
   const [username, setUsername] = useState("")
@@ -21,11 +22,11 @@ export function LoginForm({
       const passwordRegex = /^.{7,}$/
 
       if (!usernameRegex.test(username)) {
-        alert("用户名必须是3-20个字符，只能包含字母、数字和下划线。")
+        showNotification("用户名必须是3-20个字符,只能包含字母、数字和下划线。", "error")
         return
       }
       if (!passwordRegex.test(password)) {
-        alert("密码必须至少7个字符。")
+        showNotification("密码必须至少7个字符。", "error")
         return
       }
 
@@ -45,13 +46,13 @@ export function LoginForm({
           localStorage.setItem('sessionToken', data.sessionToken)
           onLogin(username, "password")
         } else {
-          alert(data.error || "登录失败。请重试。")
+          showNotification(data.error || "登录失败。请重试。", "error")
         }
       } catch (error) {
-        alert("发生错误。请重试。")
+        showNotification("发生错误。请重试。", "error")
       }
     } else {
-      alert("请输入用户名和密码。")
+      showNotification("请输入用户名和密码。", "error")
     }
   }
 
@@ -64,10 +65,8 @@ export function LoginForm({
     window.location.href = '/api/auth/github';
   }
 
-  
-
   if (isRegistering) {
-    return <RegistForm onBack={() => setIsRegistering(false)} onRegister={onRegister} />
+    return <RegistForm onBack={() => setIsRegistering(false)} onRegister={onRegister} showNotification={showNotification} />
   }
 
   return (

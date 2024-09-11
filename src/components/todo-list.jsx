@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
-import { Trash2, RefreshCw, LogIn, LogOut, Clock } from "lucide-react"
+import { Trash2, RefreshCw, LogIn, LogOut, Clock, Loader2 } from "lucide-react"
 import { LoginForm } from "./login-form"
 import { ToastContainer, useNotification } from '@/components/ui/notification'
 import Image from 'next/image';
@@ -13,7 +13,6 @@ import debounce from 'lodash/debounce';
 
 export function TodoList({ onLogin }) {
   const [tasks, setTasks] = useState([])
-  const [deletedTasks, setDeletedTasks] = useState([])
   const [newTask, setNewTask] = useState("")
   const [activeTab, setActiveTab] = useState("active")
   const [user, setUser] = useState(null)
@@ -50,7 +49,7 @@ export function TodoList({ onLogin }) {
     [fetchUserData]
   );
 
-  const syncTasks = async () => {
+  const syncTasks = async (showSyncNotification = false) => {
     try {
       const sessionToken = localStorage.getItem('sessionToken')
       if (!sessionToken) {
@@ -61,51 +60,45 @@ export function TodoList({ onLogin }) {
       // 获取本地存储的任务
       const localTasks = JSON.parse(localStorage.getItem("tasks") || '[]')
       
-      if (localTasks.length > 0) {
-        // 如果本地任务不为空,将本地任务提交到服务器
-        const response = await fetch('/api/todos', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sessionToken}`
-          },
-          body: JSON.stringify(localTasks)
-        })
-        if (!response.ok) {
-          if (response.status === 401) {
-            localStorage.removeItem('sessionToken')
-            setUser(null)
-            throw new Error('会话已过期,请重新登录')
-          }
-          throw new Error('同步任务到服务器失败')
-        }
-        
-        // 将服务器返回的任务更新到本地存储和状态
-        const serverTasks = await response.json()
-        localStorage.setItem("tasks", JSON.stringify(serverTasks))
-        setTasks(serverTasks)
-      } else {
-        // 如果本地任务为空,从服务器获取任务
-        const response = await fetch('/api/todos', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${sessionToken}`
-          }
-        })
-        if (!response.ok) {
-          if (response.status === 401) {
-            localStorage.removeItem('sessionToken')
-            setUser(null)
-            throw new Error('会话已过期,请重新登录')
-          }
-          throw new Error('获取任务失败')
-        }
-        const serverTasks = await response.json()
-        localStorage.setItem("tasks", JSON.stringify(serverTasks))
-        setTasks(serverTasks)
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionToken}`
       }
       
-      showNotification("您的任务已与服务器同步。", "success")
+      let response;
+      if (localTasks.length > 0) {
+        // 如果本地任务不为空,将本地任务提交到服务器
+        response = await fetch('/api/todos', {
+          method: 'PUT',
+          headers: headers,
+          body: JSON.stringify(localTasks)
+        })
+      } else {
+        // 如果本地任务为空,从服务器获取任务
+        response = await fetch('/api/todos', {
+          method: 'GET',
+          headers: headers
+        })
+      }
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // 会话过期,清除本地存储并提示用户重新登录
+          localStorage.removeItem('sessionToken')
+          setUser(null)
+          showNotification("会话已过期,请重新登录", "error")
+          return;
+        }
+        throw new Error(localTasks.length > 0 ? '同步任务到服务器失败' : '获取任务失败')
+      }
+      
+      const serverTasks = await response.json()
+      localStorage.setItem("tasks", JSON.stringify(serverTasks))
+      setTasks(serverTasks.sort((a, b) => b.updatedAt - a.updatedAt)) // 按 updatedAt 降序排列
+      
+      if (showSyncNotification) {
+        showNotification("您的任务已与服务器同步。", "success")
+      }
     } catch (error) {
       showNotification(error.message || "同步任务时出错。请重试。", "error")
     } finally {
@@ -115,7 +108,7 @@ export function TodoList({ onLogin }) {
 
   const debouncedSyncTasks = useCallback(
     debounce(() => {
-      syncTasks();
+      syncTasks(false);
     }, 1000),
     [syncTasks]
   );
@@ -125,9 +118,10 @@ export function TodoList({ onLogin }) {
     setUser(newUser)
     localStorage.setItem("user", JSON.stringify(newUser))
     setIsLoginOpen(false)
-    showNotification(`Welcome, ${username}! You've logged in with ${method}.`, "success")
-    debouncedSyncTasks()
-  }, [showNotification, debouncedSyncTasks]);
+    // showNotification(`Welcome, ${username}! You've logged in with ${method}.`, "success")
+    // 在登录后的第一次同步时显示通知
+    syncTasks(true) 
+  }, [showNotification]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -137,29 +131,22 @@ export function TodoList({ onLogin }) {
       localStorage.setItem('sessionToken', sessionToken);
       debouncedFetchUserData(sessionToken);
       window.history.replaceState({}, document.title, "/");
+      syncTasks(true) 
     } else {
       const storedSessionToken = localStorage.getItem('sessionToken');
       if (storedSessionToken) {
         debouncedFetchUserData(storedSessionToken);
       }
     }
-
+    
     const storedTasks = localStorage.getItem("tasks")
     if (storedTasks) {
       setTasks(JSON.parse(storedTasks))
-    }
-    const storedDeletedTasks = localStorage.getItem("deletedTasks")
-    if (storedDeletedTasks) {
-      setDeletedTasks(JSON.parse(storedDeletedTasks))
     }
   }, [debouncedFetchUserData]);
 
   const saveTasksToLocalStorage = (updatedTasks) => {
     localStorage.setItem("tasks", JSON.stringify(updatedTasks))
-  }
-
-  const saveDeletedTasksToLocalStorage = (updatedDeletedTasks) => {
-    localStorage.setItem("deletedTasks", JSON.stringify(updatedDeletedTasks))
   }
 
   const addTask = async () => {
@@ -209,15 +196,12 @@ export function TodoList({ onLogin }) {
     const localTasks = JSON.parse(localStorage.getItem("tasks") || '[]')
     const taskToDelete = localTasks.find(task => task.id === id)
     if (taskToDelete) {
-      // 更新本地存储
-      const updatedTasks = localTasks.filter(task => task.id !== id)
+      // 将 deleted 设为 true,而不是从 tasks 中移除
+      const updatedTask = { ...taskToDelete, deleted: true, deletedAt: Date.now(), updatedAt: Date.now() }
+      const updatedTasks = localTasks.map(task => task.id === id ? updatedTask : task)
+      
       localStorage.setItem("tasks", JSON.stringify(updatedTasks))
       setTasks(updatedTasks)
-      
-      const updatedDeletedTask = { ...taskToDelete, deletedAt: Date.now(), updatedAt: Date.now() }
-      const updatedDeletedTasks = [...deletedTasks, updatedDeletedTask]
-      setDeletedTasks(updatedDeletedTasks)
-      saveDeletedTasksToLocalStorage(updatedDeletedTasks)
       
       showNotification("任务删除成功！", "success")
       debouncedSyncTasks();
@@ -225,17 +209,16 @@ export function TodoList({ onLogin }) {
   }
 
   const restoreTask = (id) => {
-    const taskToRestore = deletedTasks.find(task => task.id === id)
+    const taskToRestore = tasks.find(task => task.id === id)
     if (taskToRestore) {
-      const { deletedAt, ...restoredTask } = taskToRestore
-      const updatedTasks = [...tasks, restoredTask]
+      // 将 deleted 设为 false
+      const updatedTask = { ...taskToRestore, deleted: false, deletedAt: null, updatedAt: Date.now() }
+      const updatedTasks = tasks.map(task => task.id === id ? updatedTask : task)
+      
       setTasks(updatedTasks)
       saveTasksToLocalStorage(updatedTasks)
-
-      const updatedDeletedTasks = deletedTasks.filter(task => task.id !== id)
-      setDeletedTasks(updatedDeletedTasks)
-      saveDeletedTasksToLocalStorage(updatedDeletedTasks)
-      showNotification("Task restored successfully!", "success")
+      
+      showNotification("任务已恢复!", "success")
       debouncedSyncTasks();
     }
   }
@@ -244,9 +227,7 @@ export function TodoList({ onLogin }) {
     localStorage.removeItem('sessionToken')
     localStorage.removeItem('user')
     localStorage.removeItem('tasks')
-    localStorage.removeItem('deletedTasks')
     setTasks([])
-    setDeletedTasks([])
     setUser(null)    
     showNotification("您已成功登出。", "success")
   }
@@ -257,17 +238,20 @@ export function TodoList({ onLogin }) {
     showNotification(`Welcome, ${username}! Your account has been created.`, "success")
   }
 
-  const filteredTasks = tasks.filter(task => {
-    if (activeTab === "active") return !task.completed
-    if (activeTab === "completed") return task.completed
-    return true
-  })
+  const filteredTasks = tasks
+    .filter(task => {
+      if (activeTab === "active") return !task.completed && !task.deleted
+      if (activeTab === "completed") return task.completed && !task.deleted
+      if (activeTab === "deleted") return task.deleted && !task.permanentlyDeleted
+      return true
+    })
+    .sort((a, b) => b.updatedAt - a.updatedAt) // 按 updatedAt 降序排列
 
   const formatDate = (timestamp) => {
     return new Date(timestamp).toLocaleString();
   }
 
-  const renderTasks = (taskList, showCompleted, onToggle, onDelete, onRestore) => (
+  const renderTasks = (taskList, showCompleted, onToggle, onDelete, onRestore, onPermanentlyDelete) => (
     <ul className="space-y-2">
       {taskList.map(task => (
         <li key={task.id} className="bg-muted p-3 rounded-md">
@@ -286,14 +270,38 @@ export function TodoList({ onLogin }) {
                 {task.text}
               </label>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onDelete ? onDelete(task.id) : onRestore(task.id)}
-              aria-label={`${onDelete ? 'Delete' : 'Restore'} task: ${task.text}`}
-              className="flex-shrink-0">
-              {onDelete ? <Trash2 className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
-            </Button>
+            <div className="flex items-center justify-end space-x-2">
+              {!task.deleted && onDelete && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onDelete(task.id)}
+                  aria-label={`Delete task: ${task.text}`}
+                  className="flex-shrink-0">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+              {task.deleted && onRestore && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onRestore(task.id)}
+                  aria-label={`Restore task: ${task.text}`}
+                  className="flex-shrink-0">
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              )}
+              {task.deleted && onPermanentlyDelete && (
+                <Button 
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onPermanentlyDelete(task.id)}
+                  aria-label={`Permanently delete task: ${task.text}`}
+                  className="flex-shrink-0 text-red-500 hover:text-red-600">
+                  <Trash2 className="h-4 w-4" />  
+                </Button>
+              )}
+            </div>
           </div>
           <div className="text-xs text-muted-foreground space-y-1">
             <div className="flex items-center">
@@ -318,11 +326,37 @@ export function TodoList({ onLogin }) {
     </ul>
   )
 
+  const permanentlyDeleteTask = async (id) => {
+    const localTasks = JSON.parse(localStorage.getItem("tasks") || '[]')
+    const taskToPermanentlyDelete = localTasks.find(task => task.id === id)
+    if (taskToPermanentlyDelete) {
+      const updatedTask = {
+        ...taskToPermanentlyDelete,
+        permanentlyDeleted: true,
+        updatedAt: Date.now()
+      }
+      
+      // 更新本地存储
+      const updatedTasks = localTasks.map(task => task.id === id ? updatedTask : task)
+      localStorage.setItem("tasks", JSON.stringify(updatedTasks))
+      setTasks(updatedTasks)
+      
+      showNotification("任务已永久删除!", "success")
+      debouncedSyncTasks();
+    }
+  }
+
   return (
     (<div
-      className="max-w-4xl mx-auto mt-4 p-4 sm:mt-8 sm:p-6 bg-background rounded-lg shadow-lg">
+      className="max-w-4xl mx-auto mt-4 p-4 sm:mt-8 sm:p-6 bg-background rounded-lg shadow-lg relative">
       
       <ToastContainer />
+      {isLoading && (
+        <div className="absolute top-0 right-2 flex items-center space-x-2 text-primary">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span className="text-sm">同步中...</span>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-3">
         <h1 className="text-2xl font-bold text-primary mb-4 sm:mb-0 flex items-center">
           <Image src="/icon.jpeg" alt="Todo List Icon" width={24} height={24} className="mr-2" />
@@ -343,7 +377,7 @@ export function TodoList({ onLogin }) {
             )}
           </DialogTrigger>
           <DialogContent>
-            <LoginForm onLogin={handleLogin} onRegister={handleRegister} />
+            <LoginForm onLogin={handleLogin} onRegister={handleRegister} showNotification={showNotification} />
           </DialogContent>
         </Dialog>
       </div>
@@ -379,11 +413,9 @@ export function TodoList({ onLogin }) {
           {renderTasks(filteredTasks, true, toggleTask, deleteTask)}
         </TabsContent>
         <TabsContent value="deleted">
-          {renderTasks(deletedTasks, false, toggleTask, () => {}, restoreTask)}
+          {renderTasks(filteredTasks, false, toggleTask, () => {}, restoreTask, permanentlyDeleteTask)}
         </TabsContent>
       </Tabs>
-      {isLoading && <p className="mt-4 text-center">Syncing...</p>}
-      
     </div>)
   );
 }

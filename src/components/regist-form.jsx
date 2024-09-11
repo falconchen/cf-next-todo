@@ -6,7 +6,8 @@ import { ArrowLeft } from "lucide-react"
 
 export function RegistForm({
   onBack,
-  onRegister
+  onRegister,
+  showNotification
 }) {
   const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")
@@ -18,7 +19,7 @@ export function RegistForm({
     
     if (username && email && password && confirmPassword) {
       if (password !== confirmPassword) {
-        alert("密码不匹配。")
+        showNotification("密码不匹配。", "error")
         return
       }
       // 客户端数据验证
@@ -27,15 +28,15 @@ export function RegistForm({
       const passwordRegex = /^.{7,}$/
 
       if (!usernameRegex.test(username)) {
-        alert("用户名必须是3-20个字符，只能包含字母、数字和下划线。")
+        showNotification("用户名必须是3-20个字符,只能包含字母、数字和下划线。", "error")
         return
       }
       if (!emailRegex.test(email)) {
-        alert("请输入有效的电子邮件地址。")
+        showNotification("请输入有效的电子邮件地址。", "error")
         return
       }
       if (!passwordRegex.test(password)) {
-        alert("密码必须至少7个字符。")
+        showNotification("密码必须至少7个字符。", "error")
         return
       }
 
@@ -55,13 +56,13 @@ export function RegistForm({
         if (response.ok) {
           onRegister(username, "password")
         } else {
-          alert(data.error || "注册失败。请重试。")
+          showNotification(data.error || "注册失败。请重试。", "error")
         }
       } catch (error) {
-        alert("发生错误。请重试。")
+        showNotification("发生错误。请重试。", "error")
       }
     } else {
-      alert("请填写所有字段。")
+      showNotification("请填写所有字段。", "error")
     }
   }
 
