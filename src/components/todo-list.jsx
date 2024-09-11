@@ -51,62 +51,59 @@ export function TodoList({ onLogin }) {
   );
 
   const syncTasks = async () => {
-    
     try {
       const sessionToken = localStorage.getItem('sessionToken')
       if (!sessionToken) {
         return;
-        //throw new Error('未登录')
       }
       setIsLoading(true)
-      const response = await fetch('/api/todos', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${sessionToken}`
-        }
-      })
-      if (!response.ok) {
-        if (response.status === 401) {
-          // 会话已过期，清除本地存储并提示用户重新登录
-          localStorage.removeItem('sessionToken')
-          setUser(null)
-          throw new Error('会话已过期，请重新登录')
-        }
-        throw new Error('获取任务失败')
-      }
-      const serverTasks = await response.json()
       
       // 获取本地存储的任务
       const localTasks = JSON.parse(localStorage.getItem("tasks") || '[]')
       
-      // 合并服务器和本地任务，保留 updatedAt 最大的 item
-      const mergedTasks = [...serverTasks, ...localTasks].reduce((acc, task) => {
-        const getUpdatedAt = (t) => t.updatedAt || Math.max(t.completedAt || 0, t.deletedAt || 0, t.createdAt || 0);
-        const existingTask = acc.find(t => t.id === task.id);
-        if (!existingTask || getUpdatedAt(task) > getUpdatedAt(existingTask)) {
-          const index = acc.findIndex(t => t.id === task.id);
-          if (index !== -1) {
-            acc[index] = { ...task, updatedAt: getUpdatedAt(task) };
-          } else {
-            acc.push({ ...task, updatedAt: getUpdatedAt(task) });
+      if (localTasks.length > 0) {
+        // 如果本地任务不为空,将本地任务提交到服务器
+        const response = await fetch('/api/todos', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify(localTasks)
+        })
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem('sessionToken')
+            setUser(null)
+            throw new Error('会话已过期,请重新登录')
           }
+          throw new Error('同步任务到服务器失败')
         }
-        return acc;
-      }, []);
-      
-      // 更新状态和本地存储
-      setTasks(mergedTasks)
-      localStorage.setItem("tasks", JSON.stringify(mergedTasks))
-      
-      // 将合并后的任务同步到服务器
-      await fetch('/api/todos', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionToken}`
-        },
-        body: JSON.stringify(mergedTasks)
-      })
+        
+        // 将服务器返回的任务更新到本地存储和状态
+        const serverTasks = await response.json()
+        localStorage.setItem("tasks", JSON.stringify(serverTasks))
+        setTasks(serverTasks)
+      } else {
+        // 如果本地任务为空,从服务器获取任务
+        const response = await fetch('/api/todos', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${sessionToken}`
+          }
+        })
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem('sessionToken')
+            setUser(null)
+            throw new Error('会话已过期,请重新登录')
+          }
+          throw new Error('获取任务失败')
+        }
+        const serverTasks = await response.json()
+        localStorage.setItem("tasks", JSON.stringify(serverTasks))
+        setTasks(serverTasks)
+      }
       
       showNotification("您的任务已与服务器同步。", "success")
     } catch (error) {
@@ -183,26 +180,6 @@ export function TodoList({ onLogin }) {
       setNewTask("")
       setActiveTab("active")
       
-      // 检查用户是否登录
-      // const sessionToken = localStorage.getItem('sessionToken')
-      // if (sessionToken) {
-      //   try {
-      //     const response = await fetch('/api/todos', {
-      //       method: 'POST',
-      //       headers: {
-      //         'Content-Type': 'application/json',
-      //         'Authorization': `Bearer ${sessionToken}`
-      //       },
-      //       body: JSON.stringify(newTaskObj)
-      //     })
-      //     if (!response.ok) {
-      //       throw new Error('添加任务到服务器失败')
-      //     }
-      //   } catch (error) {
-      //     showNotification(error.message || "同步任务到服务器时出错。请稍后重试。", "error")
-      //   }
-      // }
-      
       showNotification("任务添加成功！", "success")
       debouncedSyncTasks();
     }
@@ -224,25 +201,6 @@ export function TodoList({ onLogin }) {
       localStorage.setItem("tasks", JSON.stringify(updatedTasks))
       setTasks(updatedTasks)
       
-      // 检查用户是否登录
-      const sessionToken = localStorage.getItem('sessionToken')
-      if (sessionToken) {
-        try {
-          const response = await fetch('/api/todos', {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${sessionToken}`
-            },
-            body: JSON.stringify(updatedTask)
-          })
-          if (!response.ok) {
-            throw new Error('更新任务到服务器失败')
-          }
-        } catch (error) {
-          showNotification(error.message || "同步任务到服务器时出错。请稍后重试。", "error")
-        }
-      }
       debouncedSyncTasks();
     }
   }
@@ -260,26 +218,6 @@ export function TodoList({ onLogin }) {
       const updatedDeletedTasks = [...deletedTasks, updatedDeletedTask]
       setDeletedTasks(updatedDeletedTasks)
       saveDeletedTasksToLocalStorage(updatedDeletedTasks)
-      
-      // 检查用户是否登录
-      const sessionToken = localStorage.getItem('sessionToken')
-      if (sessionToken) {
-        try {
-          const response = await fetch('/api/todos', {
-            method: 'DELETE',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${sessionToken}`
-            },
-            body: JSON.stringify({ id })
-          })
-          if (!response.ok) {
-            throw new Error('从服务器删除任务失败')
-          }
-        } catch (error) {
-          showNotification(error.message || "同步删除任务到服务器时出错。请稍后重试。", "error")
-        }
-      }
       
       showNotification("任务删除成功！", "success")
       debouncedSyncTasks();
@@ -311,8 +249,6 @@ export function TodoList({ onLogin }) {
     setDeletedTasks([])
     setUser(null)    
     showNotification("您已成功登出。", "success")
-    // setIsLoginOpen(false)
-    
   }
 
   const handleRegister = async (username, method) => {
