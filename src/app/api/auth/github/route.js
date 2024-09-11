@@ -11,6 +11,7 @@ export async function GET(request) {
   const clientId = env.GITHUB_CLIENT_ID;
   const clientSecret = env.GITHUB_CLIENT_SECRET;
   const redirectUri = env.GITHUB_REDIRECT_URI;
+  const sessionExpirationTtlInSeconds = env.SESSION_EXPIRATION_TTL_IN_SECONDS || 31536000; // 1年
 
   if (!code) {
     // 如果没有 code,重定向到 GitHub 授权页面
@@ -75,7 +76,7 @@ export async function GET(request) {
       await env.MY_KV_NAMESPACE.put(githubUserKey, JSON.stringify(githubUser));
       // 生成一个简单的会话token
       const sessionToken = SHA256(githubUserKey + Date.now()).toString();
-      await env.MY_KV_NAMESPACE.put(`session:${sessionToken}`, JSON.stringify(githubUser), { expirationTtl: 3600 }); // 1小时过期
+      await env.MY_KV_NAMESPACE.put(`session:${sessionToken}`, JSON.stringify(githubUser), { expirationTtl: sessionExpirationTtlInSeconds }); 
 
       const redirectUrl = `/?sessionToken=${sessionToken}`;
       return new Response(null, {

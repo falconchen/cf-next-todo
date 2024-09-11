@@ -432,7 +432,10 @@ export function TodoList() {
       )}
       <div className="flex flex-col sm:flex-row mb-4">
         <Input
-          type="text"
+          type="text"          
+          name="new-task" 
+          autocomplete="new-password" 
+          id="new-task"
           value={newTask}
           onChange={(e) => setNewTask(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && addTask()}
