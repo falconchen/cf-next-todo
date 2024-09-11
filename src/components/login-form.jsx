@@ -56,9 +56,7 @@ export function LoginForm({
     }
   }
 
-  const handleGoogleLogin = () => {
-    onLogin("Google User", "google")
-  }
+
 
   const handleGithubLogin = () => {
     localStorage.setItem('githubLoggingIn', 'true');
