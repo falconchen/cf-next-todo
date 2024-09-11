@@ -10,8 +10,9 @@ import { LoginForm } from "./login-form"
 import { ToastContainer, useNotification } from '@/components/ui/notification'
 import Image from 'next/image';
 import debounce from 'lodash/debounce';
+import 'github-fork-ribbon-css/gh-fork-ribbon.css'
 
-export function TodoList({ onLogin }) {
+export function TodoList() {
   const [tasks, setTasks] = useState([])
   const [newTask, setNewTask] = useState("")
   const [activeTab, setActiveTab] = useState("active")
@@ -30,7 +31,7 @@ export function TodoList({ onLogin }) {
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
-        syncTasks();
+        // syncTasks(true);
       } else if (response.status === 401) {
         localStorage.removeItem('sessionToken');
         setUser(null);
@@ -43,11 +44,6 @@ export function TodoList({ onLogin }) {
       showNotification("获取用户数据时出错,请稍后重试", "error");
     }
   }, [showNotification]);
-
-  const debouncedFetchUserData = useMemo(
-    () => debounce((sessionToken) => fetchUserData(sessionToken), 1000),
-    [fetchUserData]
-  );
 
   const syncTasks = async (showSyncNotification = false) => {
     try {
@@ -129,13 +125,13 @@ export function TodoList({ onLogin }) {
     if (sessionToken && localStorage.getItem('githubLoggingIn')) {
       localStorage.removeItem('githubLoggingIn');
       localStorage.setItem('sessionToken', sessionToken);
-      debouncedFetchUserData(sessionToken);
+      fetchUserData(sessionToken);
       window.history.replaceState({}, document.title, "/");
-      syncTasks(true) 
+      syncTasks(true);
     } else {
       const storedSessionToken = localStorage.getItem('sessionToken');
       if (storedSessionToken) {
-        debouncedFetchUserData(storedSessionToken);
+        fetchUserData(storedSessionToken);
       }
     }
     
@@ -143,7 +139,7 @@ export function TodoList({ onLogin }) {
     if (storedTasks) {
       setTasks(JSON.parse(storedTasks))
     }
-  }, [debouncedFetchUserData]);
+  }, [fetchUserData]);
 
   const saveTasksToLocalStorage = (updatedTasks) => {
     localStorage.setItem("tasks", JSON.stringify(updatedTasks))
@@ -235,7 +231,7 @@ export function TodoList({ onLogin }) {
   const handleRegister = async (username, method) => {
     
     handleLogin(username, method)
-    showNotification(`Welcome, ${username}! Your account has been created.`, "success")
+    showNotification(`欢迎, ${username}! 您的账户已创建。`, "success")
   }
 
   const filteredTasks = tasks
@@ -276,7 +272,7 @@ export function TodoList({ onLogin }) {
                   variant="ghost"
                   size="icon"
                   onClick={() => onDelete(task.id)}
-                  aria-label={`Delete task: ${task.text}`}
+                  aria-label={`删除任务: ${task.text}`}
                   className="flex-shrink-0">
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -286,7 +282,7 @@ export function TodoList({ onLogin }) {
                   variant="ghost"
                   size="icon"
                   onClick={() => onRestore(task.id)}
-                  aria-label={`Restore task: ${task.text}`}
+                  aria-label={`恢复任务: ${task.text}`}
                   className="flex-shrink-0">
                   <RefreshCw className="h-4 w-4" />
                 </Button>
@@ -296,7 +292,7 @@ export function TodoList({ onLogin }) {
                   variant="ghost"
                   size="icon"
                   onClick={() => onPermanentlyDelete(task.id)}
-                  aria-label={`Permanently delete task: ${task.text}`}
+                  aria-label={`永久删除任务: ${task.text}`}
                   className="flex-shrink-0 text-red-500 hover:text-red-600">
                   <Trash2 className="h-4 w-4" />  
                 </Button>
@@ -306,18 +302,18 @@ export function TodoList({ onLogin }) {
           <div className="text-xs text-muted-foreground space-y-1">
             <div className="flex items-center">
               <Clock className="h-3 w-3 mr-1" />
-              Created: {formatDate(task.createdAt)}
+              创建时间: {formatDate(task.createdAt)}
             </div>
             {task.completed && task.completedAt && (
               <div className="flex items-center">
                 <Clock className="h-3 w-3 mr-1" />
-                Completed: {formatDate(task.completedAt)}
+                完成时间: {formatDate(task.completedAt)}
               </div>
             )}
             {task.deletedAt && (
               <div className="flex items-center">
                 <Clock className="h-3 w-3 mr-1" />
-                Deleted: {formatDate(task.deletedAt)}
+                删除时间: {formatDate(task.deletedAt)}
               </div>
             )}
           </div>
@@ -359,20 +355,20 @@ export function TodoList({ onLogin }) {
       )}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-3">
         <h1 className="text-2xl font-bold text-primary mb-4 sm:mb-0 flex items-center">
-          <Image src="/icon.jpeg" alt="Todo List Icon" width={24} height={24} className="mr-2" />
-          Next Todo
+          <Image src="/icon.jpeg" alt="待办事项列表图标" width={24} height={24} className="mr-2" />
+          Next 待办事项
         </h1>
         <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
           <DialogTrigger asChild>
             {user ? (
               <Button variant="outline" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
-                Log Out
+                登出
               </Button>
             ) : (
               <Button variant="outline">
                 <LogIn className="h-4 w-4 mr-2" />
-                Log In
+                登录
               </Button>
             )}
           </DialogTrigger>
@@ -383,11 +379,11 @@ export function TodoList({ onLogin }) {
       </div>
       {user ? (
         <p className="mb-4 text-center sm:text-left">
-          Welcome, {user.username}! (Logged in with {user.loginMethod})
+          欢迎, {user.username}! (使用 {user.loginMethod} 登录)
         </p>
       ) : (
         <p className="mb-4 text-center sm:text-left">
-          Yet another todo app, but this time with Next.js and Cloudflare and v0.dev.
+          又一个待办事项应用,这次使用 Next.js、Cloudflare 和 v0.dev。
         </p>
       )}
       <div className="flex flex-col sm:flex-row mb-4">
@@ -396,15 +392,15 @@ export function TodoList({ onLogin }) {
           value={newTask}
           onChange={(e) => setNewTask(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && addTask()}
-          placeholder="Add a new task"
+          placeholder="添加新任务"
           className="mb-2 sm:mb-0 sm:mr-2" />
-        <Button onClick={addTask} className="w-full sm:w-auto">Add</Button>
+        <Button onClick={addTask} className="w-full sm:w-auto">添加</Button>
       </div>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="active">Active</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-          <TabsTrigger value="deleted">Deleted</TabsTrigger>
+          <TabsTrigger value="active">进行中</TabsTrigger>
+          <TabsTrigger value="completed">已完成</TabsTrigger>
+          <TabsTrigger value="deleted">已删除</TabsTrigger>
         </TabsList>
         <TabsContent value="active">
           {renderTasks(filteredTasks, true, toggleTask, deleteTask)}
@@ -416,6 +412,7 @@ export function TodoList({ onLogin }) {
           {renderTasks(filteredTasks, false, toggleTask, () => {}, restoreTask, permanentlyDeleteTask)}
         </TabsContent>
       </Tabs>
+      <a className="github-fork-ribbon right-bottom fixed" href="https://github.com/yourusername/yourrepository" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</a>
     </div>)
   );
 }

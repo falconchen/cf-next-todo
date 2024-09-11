@@ -69,51 +69,51 @@ export function RegistForm({
   return (
     (<div className="space-y-6">
       <div className="space-y-2 text-center">
-        <h2 className="text-2xl font-bold">Create an Account</h2>
-        <p className="text-sm text-muted-foreground">Enter your details to register</p>
+        <h2 className="text-2xl font-bold">创建账户</h2>
+        <p className="text-sm text-muted-foreground">输入您的详细信息以注册</p>
       </div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <Input
             type="text"
-            placeholder="Username"
+            placeholder="用户名"
             value={username}
             onChange={(e) => setUsername(e.target.value)} />
         </div>
         <div>
           <Input
             type="email"
-            placeholder="Email"
+            placeholder="电子邮箱"
             value={email}
             onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div>
           <Input
             type="password"
-            placeholder="Password"
+            placeholder="密码"
             value={password}
             onChange={(e) => setPassword(e.target.value)} />
         </div>
         <div>
           <Input
             type="password"
-            placeholder="Confirm Password"
+            placeholder="确认密码"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)} />
         </div>
         <Button type="submit" className="w-full">
-          Register
+          注册
         </Button>
       </form>
       <div className="text-center text-sm">
-        Already have an account?{" "}
+        已有账户？{" "}
         <Button variant="link" className="p-0" onClick={onBack}>
-          Login
+          登录
         </Button>
       </div>
       <Button variant="ghost" onClick={onBack} className="w-full">
         <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Login
+        返回登录
       </Button>
     </div>)
   );
