@@ -185,6 +185,13 @@ export function TodoList() {
       localStorage.setItem("tasks", JSON.stringify(updatedTasks))
       setTasks(updatedTasks)
       
+      // 发送通知
+      if (updatedTask.completed) {
+        showNotification(`任务 "${updatedTask.text}" 已标记为完成。`, "success")
+      } else {
+        showNotification(`任务 "${updatedTask.text}" 已恢复为进行中。`, "success")
+      }
+      
       debouncedSyncTasks();
     }
   }
@@ -451,7 +458,7 @@ export function TodoList() {
           {renderTasks(filteredTasks, false, toggleTask, () => {}, restoreTask, permanentlyDeleteTask)}
         </TabsContent>
       </Tabs>
-      <a className="github-fork-ribbon right-bottom fixed" href="https://github.com/yourusername/yourrepository" data-ribbon="在 GitHub 上复刻" title="在 GitHub 上复刻">Fork me on GitHub</a>
+      <a className="github-fork-ribbon right-bottom fixed" href="https://github.com/falconchen/cf-next-todo" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</a>
     </div>)
   );
 }
