@@ -76,6 +76,8 @@ export function RegistForm({
         <div>
           <Input
             type="text"
+            name="username"
+            autoComplete="username"
             placeholder="用户名"
             value={username}
             onChange={(e) => setUsername(e.target.value)} />
@@ -83,6 +85,8 @@ export function RegistForm({
         <div>
           <Input
             type="email"
+            name="email"
+            autoComplete="email"
             placeholder="电子邮箱"
             value={email}
             onChange={(e) => setEmail(e.target.value)} />
@@ -90,6 +94,8 @@ export function RegistForm({
         <div>
           <Input
             type="password"
+            name="new-password"
+            autoComplete="new-password"
             placeholder="密码"
             value={password}
             onChange={(e) => setPassword(e.target.value)} />
@@ -97,6 +103,8 @@ export function RegistForm({
         <div>
           <Input
             type="password"
+            name="new-password"
+            autoComplete="new-password"
             placeholder="确认密码"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)} />

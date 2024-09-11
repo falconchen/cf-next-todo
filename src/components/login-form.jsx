@@ -95,6 +95,8 @@ export function LoginForm({
         <div>
           <Input
             type="text"
+            name="username"
+            autoComplete="username"
             placeholder="用户名"
             value={username}
             onChange={(e) => setUsername(e.target.value)} />
@@ -102,6 +104,8 @@ export function LoginForm({
         <div>
           <Input
             type="password"
+            name="current-password"
+            autoComplete="current-password"
             placeholder="密码"
             value={password}
             onChange={(e) => setPassword(e.target.value)} />

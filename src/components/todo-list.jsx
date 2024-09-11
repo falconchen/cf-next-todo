@@ -437,7 +437,12 @@ export function TodoList() {
           onChange={(e) => setNewTask(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && addTask()}
           placeholder="添加新任务"
-          className="mb-2 sm:mb-0 sm:mr-2" />
+          className="mb-2 sm:mb-0 sm:mr-2"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
+        />
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button onClick={addTask} className="w-full sm:w-auto">添加</Button>
         </motion.div>
@@ -458,7 +463,7 @@ export function TodoList() {
           {renderTasks(filteredTasks, false, toggleTask, () => {}, restoreTask, permanentlyDeleteTask)}
         </TabsContent>
       </Tabs>
-      <a className="github-fork-ribbon right-bottom fixed" href="https://github.com/falconchen/cf-next-todo" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</a>
+      
     </div>)
   );
 }
