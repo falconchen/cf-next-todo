@@ -56,8 +56,6 @@ export function LoginForm({
     }
   }
 
-
-
   const handleGithubLogin = () => {
     localStorage.setItem('githubLoggingIn', 'true');
     window.location.href = '/api/auth/github';

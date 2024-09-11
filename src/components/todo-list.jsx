@@ -31,7 +31,7 @@ export function TodoList() {
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
-        // syncTasks(true);
+        
       } else if (response.status === 401) {
         localStorage.removeItem('sessionToken');
         setUser(null);
@@ -250,7 +250,7 @@ export function TodoList() {
   const renderTasks = (taskList, showCompleted, onToggle, onDelete, onRestore, onPermanentlyDelete) => (
     <ul className="space-y-2">
       {taskList.map(task => (
-        <li key={task.id} className="bg-muted p-3 rounded-md">
+        <li key={task.id} className="bg-muted p-3 rounded-md hover:bg-muted/40 transition-colors duration-200 cursor-pointer group">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center flex-grow mr-2">
               {showCompleted && (
@@ -262,7 +262,7 @@ export function TodoList() {
               )}
               <label
                 htmlFor={`task-${task.id}`}
-                className={`${task.completed ? 'line-through text-muted-foreground' : 'text-primary'} break-words`}>
+                className={`${task.completed ? 'line-through text-muted-foreground' : 'text-foreground'} break-words cursor-pointer group-hover:text-muted-foreground transition-colors duration-200`}>
                 {task.text}
               </label>
             </div>
@@ -356,7 +356,7 @@ export function TodoList() {
       <div className="flex flex-col sm:flex-row justify-between items-center mb-3">
         <h1 className="text-2xl font-bold text-primary mb-4 sm:mb-0 flex items-center">
           <Image src="/icon.jpeg" alt="待办事项列表图标" width={24} height={24} className="mr-2" />
-          Next 待办事项
+          Next Todo
         </h1>
         <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
           <DialogTrigger asChild>
