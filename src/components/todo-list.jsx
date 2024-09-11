@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -29,22 +29,26 @@ export function TodoList({ onLogin }) {
         },
       });
       if (response.ok) {
-        return await response.json();
+        const userData = await response.json();
+        setUser(userData);
+        syncTasks();
       } else if (response.status === 401) {
-        // 会话已过期
         localStorage.removeItem('sessionToken');
         setUser(null);
         showNotification("会话已过期,请重新登录", "error");
-        return null;
       } else {
         throw new Error('获取用户数据失败');
       }
     } catch (error) {
       console.error('获取用户数据时出错:', error);
       showNotification("获取用户数据时出错,请稍后重试", "error");
-      return null;
     }
   }, [showNotification]);
+
+  const debouncedFetchUserData = useMemo(
+    () => debounce((sessionToken) => fetchUserData(sessionToken), 1000),
+    [fetchUserData]
+  );
 
   const syncTasks = async () => {
     
@@ -52,7 +56,7 @@ export function TodoList({ onLogin }) {
       const sessionToken = localStorage.getItem('sessionToken')
       if (!sessionToken) {
         return;
-        // throw new Error('未登录')
+        //throw new Error('未登录')
       }
       setIsLoading(true)
       const response = await fetch('/api/todos', {
@@ -125,7 +129,8 @@ export function TodoList({ onLogin }) {
     localStorage.setItem("user", JSON.stringify(newUser))
     setIsLoginOpen(false)
     showNotification(`Welcome, ${username}! You've logged in with ${method}.`, "success")
-  }, [showNotification]);
+    debouncedSyncTasks()
+  }, [showNotification, debouncedSyncTasks]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -133,21 +138,12 @@ export function TodoList({ onLogin }) {
     if (sessionToken && localStorage.getItem('githubLoggingIn')) {
       localStorage.removeItem('githubLoggingIn');
       localStorage.setItem('sessionToken', sessionToken);
-      fetchUserData(sessionToken).then(userData => {
-        if (userData) {
-          setUser({ username: userData.username, loginMethod: "github" });
-          syncTasks();
-        }
-      });
+      debouncedFetchUserData(sessionToken);
       window.history.replaceState({}, document.title, "/");
     } else {
       const storedSessionToken = localStorage.getItem('sessionToken');
       if (storedSessionToken) {
-        fetchUserData(storedSessionToken).then(userData => {
-          if (userData) {
-            setUser(userData);
-          }
-        });
+        debouncedFetchUserData(storedSessionToken);
       }
     }
 
@@ -159,7 +155,7 @@ export function TodoList({ onLogin }) {
     if (storedDeletedTasks) {
       setDeletedTasks(JSON.parse(storedDeletedTasks))
     }
-  }, [fetchUserData]);
+  }, [debouncedFetchUserData]);
 
   const saveTasksToLocalStorage = (updatedTasks) => {
     localStorage.setItem("tasks", JSON.stringify(updatedTasks))
@@ -188,24 +184,24 @@ export function TodoList({ onLogin }) {
       setActiveTab("active")
       
       // 检查用户是否登录
-      const sessionToken = localStorage.getItem('sessionToken')
-      if (sessionToken) {
-        try {
-          const response = await fetch('/api/todos', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${sessionToken}`
-            },
-            body: JSON.stringify(newTaskObj)
-          })
-          if (!response.ok) {
-            throw new Error('添加任务到服务器失败')
-          }
-        } catch (error) {
-          showNotification(error.message || "同步任务到服务器时出错。请稍后重试。", "error")
-        }
-      }
+      // const sessionToken = localStorage.getItem('sessionToken')
+      // if (sessionToken) {
+      //   try {
+      //     const response = await fetch('/api/todos', {
+      //       method: 'POST',
+      //       headers: {
+      //         'Content-Type': 'application/json',
+      //         'Authorization': `Bearer ${sessionToken}`
+      //       },
+      //       body: JSON.stringify(newTaskObj)
+      //     })
+      //     if (!response.ok) {
+      //       throw new Error('添加任务到服务器失败')
+      //     }
+      //   } catch (error) {
+      //     showNotification(error.message || "同步任务到服务器时出错。请稍后重试。", "error")
+      //   }
+      // }
       
       showNotification("任务添加成功！", "success")
       debouncedSyncTasks();
