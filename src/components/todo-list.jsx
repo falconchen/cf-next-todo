@@ -122,6 +122,7 @@ export function TodoList() {
   }, [showNotification]);
 
   useEffect(() => {
+    console.log("useEffect");
     const url = new URL(window.location.href);
     const sessionToken = url.searchParams.get('sessionToken');
     if (sessionToken && localStorage.getItem('githubLoggingIn')) {
@@ -134,13 +135,16 @@ export function TodoList() {
       const storedSessionToken = localStorage.getItem('sessionToken');
       if (storedSessionToken) {
         fetchUserData(storedSessionToken);
+        debouncedSyncTasks(true);
+      }else{
+        const storedTasks = localStorage.getItem("tasks")
+        if (storedTasks) {
+          setTasks(JSON.parse(storedTasks))
+        }
       }
     }
     
-    const storedTasks = localStorage.getItem("tasks")
-    if (storedTasks) {
-      setTasks(JSON.parse(storedTasks))
-    }
+    
   }, [fetchUserData]);
 
   const saveTasksToLocalStorage = (updatedTasks) => {
