@@ -54,7 +54,7 @@ export function RegistForm({
         })
         const data = await response.json()
         if (response.ok) {
-          onRegister(username, "password")
+          onRegister(username, "password",data.sessionToken)
         } else {
           showNotification(data.error || "注册失败。请重试。", "error")
         }

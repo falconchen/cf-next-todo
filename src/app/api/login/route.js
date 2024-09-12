@@ -45,7 +45,8 @@ export async function POST(request) {
   
   const sessionExpirationTtlInSeconds = env.SESSION_EXPIRATION_TTL_IN_SECONDS || 31536000;
   // 登录成功，生成一个简单的会话token
-  const sessionToken = SHA256(username + Date.now()).toString()
+  
+  const sessionToken = crypto.randomUUID()
   await env.MY_KV_NAMESPACE.put(`session:${sessionToken}`, JSON.stringify(user), { expirationTtl: sessionExpirationTtlInSeconds }) 
 
   return new Response(JSON.stringify({ message: '登录成功', sessionToken }), {

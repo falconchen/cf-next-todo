@@ -111,13 +111,11 @@ export function TodoList() {
     [syncTasks]
   );
 
-  const handleLogin = useCallback(async (username, method) => {
-    const newUser = { username, loginMethod: method }
-    setUser(newUser)
-    localStorage.setItem("user", JSON.stringify(newUser))
+  const handleLogin = useCallback(async (username, loginMethod,sessionToken) => {
+    const user = { username, loginMethod, sessionToken }
+    setUser(user)
+    localStorage.setItem('sessionToken', sessionToken)
     setIsLoginOpen(false)
-    // showNotification(`Welcome, ${username}! You've logged in with ${method}.`, "success")
-    // 在登录后的第一次同步时显示通知
     syncTasks(true) 
   }, [showNotification]);
 
@@ -241,9 +239,13 @@ export function TodoList() {
     showNotification("您已成功登出。", "success")
   }
 
-  const handleRegister = async (username, method) => {
+  const handleRegister = async (username, loginMethod,sessionToken) => {
     
-    handleLogin(username, method)
+    const user = { username, loginMethod, sessionToken }
+    setUser(user)
+    localStorage.setItem('sessionToken', sessionToken)
+    setIsLoginOpen(false)
+    setTasks([])
     showNotification(`欢迎, ${username}! 您的账户已创建。`, "success")
   }
 

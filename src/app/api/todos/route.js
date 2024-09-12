@@ -10,11 +10,17 @@ async function getUserId(request) {
   const sessionToken = authHeader.split(' ')[1]
   
   const { env } = getRequestContext()
-  const userId = await env.MY_KV_NAMESPACE.get(`session:${sessionToken}`)
-  if (!userId) {
+  const userStr = await env.MY_KV_NAMESPACE.get(`session:${sessionToken}`)
+  if (!userStr) {
     throw new Error('Invalid or expired session token')
   }
-  return userId
+  const user = JSON.parse(userStr)
+
+  if (user.loginMethod === 'password') {
+    return `${user.loginMethod}#${user.username}`    
+  } else {
+    return `${user.loginMethod}#${user.id}`
+  }
 }
 
 async function handleRequest(request, handler) {

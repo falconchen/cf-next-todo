@@ -75,7 +75,7 @@ export async function GET(request) {
       // }
       await env.MY_KV_NAMESPACE.put(githubUserKey, JSON.stringify(githubUser));
       // 生成一个简单的会话token
-      const sessionToken = SHA256(githubUserKey + Date.now()).toString();
+      const sessionToken = crypto.randomUUID();
       await env.MY_KV_NAMESPACE.put(`session:${sessionToken}`, JSON.stringify(githubUser), { expirationTtl: sessionExpirationTtlInSeconds }); 
 
       const redirectUrl = `/?sessionToken=${sessionToken}`;

@@ -54,7 +54,14 @@ export async function POST(request) {
   userList.push(username)
   await env.MY_KV_NAMESPACE.put('userList', JSON.stringify(userList))
 
-  return new Response(JSON.stringify({ message: '用户注册成功' }), {
+    
+  const sessionExpirationTtlInSeconds = env.SESSION_EXPIRATION_TTL_IN_SECONDS || 31536000;
+  // 登录成功，生成一个简单的会话token
+  const sessionToken = crypto.randomUUID()
+  await env.MY_KV_NAMESPACE.put(`session:${sessionToken}`, JSON.stringify(newUser), { expirationTtl: sessionExpirationTtlInSeconds }) 
+
+
+  return new Response(JSON.stringify({ message: '用户注册成功' , sessionToken}), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   })

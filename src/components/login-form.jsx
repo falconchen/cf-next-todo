@@ -43,8 +43,8 @@ export function LoginForm({
         })
         const data = await response.json()
         if (response.ok) {
-          localStorage.setItem('sessionToken', data.sessionToken)
-          onLogin(username, "password")
+          
+          onLogin(username, "password",data.sessionToken)
         } else {
           showNotification(data.error || "登录失败。请重试。", "error")
         }
