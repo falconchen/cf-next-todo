@@ -44,7 +44,7 @@ pages_build_output_dir = ".vercel/output/static"
 # KV Example:
 [[kv_namespaces]]
 binding = "MY_KV_NAMESPACE"
-id = "da17eb5d87f44ee883b9d77ee0643bf0"
+id = "8a1843654bd2487b9ee7f06eed2c6b0f"
 
 # Bind a Queue producer. Use this binding to schedule an arbitrary task that may be processed later by a Queue consumer.
 # Docs: https://developers.cloudflare.com/pages/functions/bindings/#queue-producers
