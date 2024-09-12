@@ -63,6 +63,11 @@ export async function PUT(request) {
       // 合并多个任务
       const serverTodos = JSON.parse(await env.MY_KV_NAMESPACE.get(todosKey) || '[]')
       
+      // const updatedTodos = [{"id":1726167709712,"text":"测试同步","completed":false,"createdAt":1726167709712,"updatedAt":1726167709712}]
+      // const serverTodos = [{"id":1726167709712,"text":"测试同步","completed":false,"createdAt":1726167709712,"updatedAt":1726167747896,"deleted":true,"deletedAt":1726167747896}]
+
+      
+
       // 合并服务器和本地任务，保留 updatedAt 最大的 item
       let mergedTodos = [...serverTodos, ...updatedTodos].reduce((acc, task) => {
         const getUpdatedAt = (t) => t.updatedAt || Math.max(t.completedAt || 0, t.deletedAt || 0, t.createdAt || 0);
@@ -77,11 +82,16 @@ export async function PUT(request) {
         }
         return acc;
       }, []);    
-
-
       
+      console.log({serverTodos, updatedTodos,mergedTodos})
+
+
+
       // 按 updatedAt 降序排列
       mergedTodos.sort((a, b) => b.updatedAt - a.updatedAt)
+
+
+
       
       await env.MY_KV_NAMESPACE.put(todosKey, JSON.stringify(mergedTodos))
       
