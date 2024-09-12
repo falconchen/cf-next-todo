@@ -38,26 +38,14 @@ async function handleRequest(request, handler) {
 export async function GET(request) {
   return handleRequest(request, async (userId) => {
     const { env } = getRequestContext()
-    const todos = await env.MY_KV_NAMESPACE.get(`todos:${userId}`)
-    return new Response(todos || '[]', {
+    const validTodos = JSON.parse(await env.MY_KV_NAMESPACE.get(`todos:${userId}`) || '[]').filter(t => !t.permanentlyDeleted)
+    return new Response(JSON.stringify(validTodos), {
       headers: { 'Content-Type': 'application/json' },
     })
   })
 }
 
-export async function POST(request) {
-  return handleRequest(request, async (userId) => {
-    const { env } = getRequestContext()
-    const todo = await request.json()
-    const todosKey = `todos:${userId}`
-    const todos = JSON.parse(await env.MY_KV_NAMESPACE.get(todosKey) || '[]')
-    todos.push(todo)
-    await env.MY_KV_NAMESPACE.put(todosKey, JSON.stringify(todos))
-    return new Response(JSON.stringify(todo), {
-      headers: { 'Content-Type': 'application/json' },
-    })
-  })
-}
+
 
 export async function PUT(request) {
   return handleRequest(request, async (userId) => {
@@ -84,19 +72,21 @@ export async function PUT(request) {
         return acc;
       }, []);    
 
-      // 删除被标记为永久删除的任务
-      mergedTodos = mergedTodos.filter(t => !t.permanentlyDeleted)
+
       
       // 按 updatedAt 降序排列
       mergedTodos.sort((a, b) => b.updatedAt - a.updatedAt)
       
       await env.MY_KV_NAMESPACE.put(todosKey, JSON.stringify(mergedTodos))
       
-      return new Response(JSON.stringify(mergedTodos), {
+      //过滤掉 permanentlyDeleted 的任务。
+      const validTodos = mergedTodos.filter(t => !t.permanentlyDeleted)
+
+      return new Response(JSON.stringify(validTodos), {
         headers: { 'Content-Type': 'application/json' },
       })
     } else {
-      // 更新单个任务
+      // 更新单个任务（弃用）
       const existingTodos = JSON.parse(await env.MY_KV_NAMESPACE.get(todosKey) || '[]')
       const index = existingTodos.findIndex(t => t.id === updatedTodos.id)
       if (index !== -1) {
@@ -112,6 +102,22 @@ export async function PUT(request) {
   })
 }
 
+// 添加任务(弃用)
+export async function POST(request) {
+  return handleRequest(request, async (userId) => {
+    const { env } = getRequestContext()
+    const todo = await request.json()
+    const todosKey = `todos:${userId}`
+    const todos = JSON.parse(await env.MY_KV_NAMESPACE.get(todosKey) || '[]')
+    todos.push(todo)
+    await env.MY_KV_NAMESPACE.put(todosKey, JSON.stringify(todos))
+    return new Response(JSON.stringify(todo), {
+      headers: { 'Content-Type': 'application/json' },
+    })
+  })
+}
+
+// 删除任务(弃用)
 export async function DELETE(request) {
   return handleRequest(request, async (userId) => {
     const { env } = getRequestContext()
