@@ -96,11 +96,14 @@ export async function PUT(request) {
       await env.MY_KV_NAMESPACE.put(todosKey, JSON.stringify(mergedTodos))
       
       //过滤掉 permanentlyDeleted 的任务。
-      const validTodos = mergedTodos.filter(t => !t.permanentlyDeleted)
+      // const validTodos = mergedTodos.filter(t => !t.permanentlyDeleted)
 
+      
+      const validTodos = JSON.parse(await env.MY_KV_NAMESPACE.get(todosKey) || '[]').filter(t => !t.permanentlyDeleted)
       return new Response(JSON.stringify(validTodos), {
         headers: { 'Content-Type': 'application/json' },
       })
+
     } else {
       // 更新单个任务（弃用）
       const existingTodos = JSON.parse(await env.MY_KV_NAMESPACE.get(todosKey) || '[]')
