@@ -21,7 +21,6 @@ export function TodoList() {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoginOpen, setIsLoginOpen] = useState(false)
   const showNotification = useNotification();
-  const [shouldToggle, setShouldToggle] = useState(true);
 
   const fetchUserData = useCallback(async (sessionToken) => {
     try {
@@ -128,7 +127,7 @@ export function TodoList() {
       localStorage.setItem('sessionToken', sessionToken);
       fetchUserData(sessionToken);
       window.history.replaceState({}, document.title, "/");
-      // syncTasks(true);
+      syncTasks(true);
     } else {
       const storedSessionToken = localStorage.getItem('sessionToken');
       if (storedSessionToken) {
@@ -272,14 +271,9 @@ export function TodoList() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.3 }}
-              className={`bg-muted p-3 rounded-md transition-colors duration-200 cursor-pointer mb-2 ${
-                !task.completed && !task.deleted ? 'hover:bg-muted/40 group' : ''
+              className={`bg-muted p-3 rounded-md transition-colors duration-200 ${
+                !task.completed && !task.deleted ? 'hover:bg-muted/40' : ''
               }`}
-              onClick={(e) => {
-                if (!task.completed && !task.deleted && e.target.closest('button') === null && shouldToggle) {
-                  onToggle(task.id);
-                }
-              }}
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center flex-grow mr-2">
@@ -287,11 +281,7 @@ export function TodoList() {
                     <Checkbox
                       id={`task-${task.id}`}
                       checked={task.completed}
-                      onCheckedChange={() => {
-                        setShouldToggle(false);
-                        onToggle(task.id);
-                        setTimeout(() => setShouldToggle(true), 0);
-                      }}
+                      onCheckedChange={() => onToggle(task.id)}
                       className="mr-2 flex-shrink-0"
                     />
                   )}
@@ -300,7 +290,7 @@ export function TodoList() {
                     className={`${
                       task.completed
                         ? 'line-through text-muted-foreground'
-                        : 'text-foreground group-hover:line-through'
+                        : 'text-foreground'
                     } break-words cursor-pointer transition-all duration-200`}
                   >
                     {task.text}
