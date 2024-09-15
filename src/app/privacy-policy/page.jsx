@@ -67,7 +67,9 @@ export default function PrivacyPolicy() {
         <p>我们可能会不时更新本隐私政策。我们会在本页面上发布任何更改。</p>
 
         <h2>9. 联系我们</h2>
-        <p>如果您对本隐私政策有任何问题，请通过以下方式联系我们：[您的联系信息]</p>
+        <p>如果您对本隐私政策有任何问题，请通过以下方式联系我们：</p>
+        <p>Email: nextjsisfine@gmail.com
+        </p>
       </div>
     </div>
   );
