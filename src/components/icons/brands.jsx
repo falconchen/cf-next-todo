@@ -2,8 +2,7 @@ import React from 'react';
 import { 
   siGithub, 
   siGoogle, 
-  siFacebook, 
-  siTwitter, 
+  siFacebook,   
   siYoutube, 
   siX,
   siXiaohongshu,
@@ -50,11 +49,6 @@ export const Youtube = ({ size = 24, className }) => (
   </IconWrapper>
 );
 
-export const Twitter = ({ size = 24, className }) => (
-  <IconWrapper size={size} title="Twitter" className={className}>
-    <path d={siTwitter.path} />
-  </IconWrapper>
-);
 
 export const X = ({ size = 24, className }) => (
   <IconWrapper size={size} title="X" className={className}>
