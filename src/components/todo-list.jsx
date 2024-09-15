@@ -47,7 +47,7 @@ export function TodoList() {
     }
   }, [showNotification]);
 
-  const syncTasks = async (showSyncNotification = false) => {
+  const syncTasks = useCallback(async (showSyncNotification = false) => {
     try {
       const sessionToken = localStorage.getItem('sessionToken')
       if (!sessionToken) {
@@ -102,22 +102,22 @@ export function TodoList() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [showNotification, setUser, setTasks, setIsLoading]);
 
-  const debouncedSyncTasks = useCallback(
-    debounce(() => {
-      syncTasks(false);
+  const debouncedSyncTasks = useMemo(
+    () => debounce((showSyncNotification) => {
+      syncTasks(showSyncNotification);
     }, 1000),
     [syncTasks]
   );
 
-  const handleLogin = useCallback(async (username, loginMethod,sessionToken) => {
+  const handleLogin = useCallback(async (username, loginMethod, sessionToken) => {
     const user = { username, loginMethod, sessionToken }
     setUser(user)
     localStorage.setItem('sessionToken', sessionToken)
     setIsLoginOpen(false)
     syncTasks(true) 
-  }, [showNotification]);
+  }, [syncTasks, setUser, setIsLoginOpen]);
 
   useEffect(() => {
     console.log("useEffect");
@@ -128,7 +128,7 @@ export function TodoList() {
       localStorage.setItem('sessionToken', sessionToken);
       fetchUserData(sessionToken);
       window.history.replaceState({}, document.title, "/");
-      syncTasks(true);
+      // syncTasks(true);
     } else {
       const storedSessionToken = localStorage.getItem('sessionToken');
       if (storedSessionToken) {
@@ -143,7 +143,7 @@ export function TodoList() {
     }
     
     
-  }, [fetchUserData]);
+  }, [fetchUserData, debouncedSyncTasks, syncTasks]);
 
   const saveTasksToLocalStorage = (updatedTasks) => {
     localStorage.setItem("tasks", JSON.stringify(updatedTasks))
