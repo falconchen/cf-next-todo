@@ -1,6 +1,6 @@
 import { TodoList } from '@/components/todo-list'
 import Footer from '@/components/footer'
-import Link from 'next/link';
+import GitHubForkRibbon from '@/components/github-fork-ribbon'
 
 export default function Home() {
   return (
@@ -9,7 +9,11 @@ export default function Home() {
         <TodoList />
       </div>
       <Footer />    
-      <Link className="github-fork-ribbon left-top " href="https://github.com/falconchen/cf-next-todo" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</Link>
+      <GitHubForkRibbon 
+        href="https://github.com/falconchen/cf-next-todo" 
+        dataRibbon="Fork me on GitHub" 
+        title="Fork me on GitHub"
+      />
     </main>
   )
 }
