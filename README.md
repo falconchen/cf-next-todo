@@ -49,15 +49,10 @@ Next Todo 是一个功能完整的待办事项管理应用，采用现代 Web �
 
 本项目使用 Cloudflare Pages 进行部署。确保你有一个 Cloudflare 账户并已设置好 Cloudflare Pages。
 
-1. 构建项目：
-   ```
-   npm run build
-   ```
-
-2. 部署到 Cloudflare Pages：
-   ```
-   npm run deploy
-   ```
+  - 构建并部署到 Cloudflare Pages：
+    ```
+    npm run deploy
+    ```
 
 
 
