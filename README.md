@@ -1,57 +1,78 @@
-# 使用cloudflare + nextjs + v0.dev 做的Todo List
+# Next Todo - 基于 Cloudflare + Next.js + v0.dev 的待办事项应用
 
-听说以前 <v0.dev> 改版了，加强了ai聊天的能力，昨天试着做了个todo list玩了一下，完成度相当高啊，而且可以定制化，比如我做的这个，就是用聊天的方式，让ai给我生成一个ui组件，然后我再稍微调整一下，就可以用了，下一步准备用cursor开发api和oauth。
+Next Todo 是一个功能完整的待办事项管理应用，采用现代 Web 技术栈构建。本项目展示了如何结合 Cloudflare、Next.js 和 v0.dev 创建一个全栈应用。
 
-## 先看看效果
+## 在线演示
 
-<https://cf-next-todo.pages.dev/>
+访问 [https://cf-next-todo.pages.dev/](https://cf-next-todo.pages.dev/) 体验应用。
 
-部署在cloudflare，目前不登录可以使用，数据保存在 `localStorage`。
+## 功能特性
 
-[代码Github Repo](https://github.com/falconchen/cf-next-todo)
+- 用户注册和登录（支持邮箱、GitHub OAuth）
+- 创建、编辑、删除和恢复待办事项
+- 任务状态管理（进行中、已完成、已删除）
+- 数据同步（在线和离线模式）
+- 响应式设计，支持移动端和桌面端
+- 深色模式支持
+
+## 技术栈
+
+- 前端：Next.js、React、Tailwind CSS、shadcn/ui
+- 后端：Cloudflare Workers
+- 数据库：Cloudflare KV 
+- 认证：自定义邮箱认证、GitHub OAuth
+- 部署：Cloudflare Pages
+
+## 本地开发
+
+1. 克隆仓库：
+   ```
+   git clone https://github.com/falconchen/cf-next-todo.git
+   cd cf-next-todo
+   ```
+
+2. 安装依赖：
+   ```
+   npm install
+   ```
+
+3. 设置环境变量：
+   创建 `.env.local` 文件，并添加必要的环境变量（参考 `.dev.vars.example`）。
+
+4. 运行开发服务器：
+   ```
+   npm run dev
+   ```
+
+5. 在浏览器中打开 [http://localhost:3000](http://localhost:3000)。
+
+## 部署
+
+本项目使用 Cloudflare Pages 进行部署。确保你有一个 Cloudflare 账户并已设置好 Cloudflare Pages。
+
+1. 构建项目：
+   ```
+   npm run build
+   ```
+
+2. 部署到 Cloudflare Pages：
+   ```
+   npm run deploy
+   ```
 
 
-## 使用
 
-1. 创建项目
-```
-npm create cloudflare@latest -- cf-next-todo --framework=next
-```
+## 许可证
 
-2. 安装<v0.dev>聊天做好的ui组件： 
+本项目采用 MIT 许可证。详情请见 [LICENSE](LICENSE) 文件。
 
-可能有多个组件，所以可能执行需要多次:
-比如我的是 `todo-list`，`regist-form`，`login-form`
-```
+## 致谢
 
-npx shadcn@latest add "https://v0.dev/chat/b/组件1token"
-npx shadcn@latest add "https://v0.dev/chat/b/组件2token"
-npx shadcn@latest add "https://v0.dev/chat/b/组件3token"
-```
+- [Next.js](https://nextjs.org/)
+- [Cloudflare](https://www.cloudflare.com/)
+- [v0.dev](https://v0.dev/)
+- [shadcn/ui](https://ui.shadcn.com/)
 
-3. 修改src/app/page.js
+## 联系方式
 
-```
-import { TodoList } from '@/components/todo-list'
-
-export default function Home() {
-  return (
-    <main className="container mx-auto px-4">
-      <TodoList />
-    </main>
-  )
-}
-```
-
-4. 部署到cloudflare
-```
-npm run deploy
-```
-
-
-## 服务端开发 
-
-1. 
-
-## 参考文档：
-[入门指南 | 全栈（SSR）| Next.js 应用 --- Get started | Full-stack (SSR) | Next.js apps](https://developers.cloudflare.com/pages/framework-guides/nextjs/ssr/get-started/)
+如有任何问题或建议，请通过 [GitHub Issues](https://github.com/falconchen/cf-next-todo/issues) 联系我们。
