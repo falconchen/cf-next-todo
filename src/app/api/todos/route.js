@@ -17,10 +17,36 @@ async function getUserId(request) {
   const user = JSON.parse(userStr)
 
   if (user.loginMethod === 'password') {
-    return `${user.loginMethod}#${user.username}`    
+    return `${user.loginMethod}@${user.username}`    
   } else {
-    return `${user.loginMethod}#${user.id}`      
+    return `${user.loginMethod}@${user.id}`      
   }      
+}
+async function getStorage(env) {
+  if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
+    
+    return {
+      async get(key) {
+        const prefix = env.UPSTASH_PREFIX ? `${env.UPSTASH_PREFIX}:` : ''
+        const response = await fetch(`${env.UPSTASH_REDIS_REST_URL}/get/${prefix}${key}`, {
+          headers: { Authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}` }
+        })
+        if (!response.ok) throw new Error('Failed to get value from Redis')
+        const data = await response.json()
+        return data.result
+      },
+      async put(key, value) {
+        const prefix = env.UPSTASH_PREFIX ? `${env.UPSTASH_PREFIX}:` : ''
+        const response = await fetch(`${env.UPSTASH_REDIS_REST_URL}/set/${prefix}${key}/${value}`, {
+          headers: { Authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}` }
+        })
+        
+        if (!response.ok) throw new Error('Failed to set value in Redis')
+      }
+    }
+  } else {
+    return env.MY_KV_NAMESPACE
+  }
 }
 
 async function handleRequest(request, handler) {
@@ -44,7 +70,10 @@ async function handleRequest(request, handler) {
 export async function GET(request) {
   return handleRequest(request, async (userId) => {
     const { env } = getRequestContext()
-    const validTodos = JSON.parse(await env.MY_KV_NAMESPACE.get(`todos:${userId}`) || '[]').filter(t => !t.permanentlyDeleted)
+    const storage = await getStorage(env)
+    const todosKey = `todos:${userId}`
+    const todos = await storage.get(todosKey) || '[]'
+    const validTodos = JSON.parse(todos).filter(t => !t.permanentlyDeleted)
     return new Response(JSON.stringify(validTodos), {
       headers: { 'Content-Type': 'application/json' },
     })
@@ -61,7 +90,9 @@ export async function PUT(request) {
 
     if (Array.isArray(updatedTodos)) {
       // 合并多个任务
-      const serverTodos = JSON.parse(await env.MY_KV_NAMESPACE.get(todosKey) || '[]')
+      const storage = await getStorage(env)
+      const serverTodos = JSON.parse(await storage.get(todosKey) || '[]')
+
       
       // const updatedTodos = [{"id":1726167709712,"text":"测试同步","completed":false,"createdAt":1726167709712,"updatedAt":1726167709712}]
       // const serverTodos = [{"id":1726167709712,"text":"测试同步","completed":false,"createdAt":1726167709712,"updatedAt":1726167747896,"deleted":true,"deletedAt":1726167747896}]
@@ -83,7 +114,7 @@ export async function PUT(request) {
         return acc;
       }, []);    
       
-      console.log({serverTodos, updatedTodos,mergedTodos})
+      // console.log({serverTodos, updatedTodos,mergedTodos})
 
 
 
@@ -91,60 +122,54 @@ export async function PUT(request) {
       mergedTodos.sort((a, b) => b.updatedAt - a.updatedAt)
 
 
-
       
-      await env.MY_KV_NAMESPACE.put(todosKey, JSON.stringify(mergedTodos))
+      
+      // await storage.put(todosKey, JSON.stringify(mergedTodos))
+      await storage.put(todosKey, JSON.stringify(mergedTodos))
       
       //过滤掉 permanentlyDeleted 的任务。
-      // const validTodos = mergedTodos.filter(t => !t.permanentlyDeleted)
 
       
-      const validTodos = JSON.parse(await env.MY_KV_NAMESPACE.get(todosKey) || '[]').filter(t => !t.permanentlyDeleted)
+      const validTodos = mergedTodos.filter(t => !t.permanentlyDeleted)
       return new Response(JSON.stringify(validTodos), {
         headers: { 'Content-Type': 'application/json' },
       })
 
     } else {
-      // 更新单个任务（弃用）
-      const existingTodos = JSON.parse(await env.MY_KV_NAMESPACE.get(todosKey) || '[]')
-      const index = existingTodos.findIndex(t => t.id === updatedTodos.id)
-      if (index !== -1) {
-        existingTodos[index] = { ...existingTodos[index], ...updatedTodos }
-        existingTodos.sort((a, b) => b.updatedAt - a.updatedAt) // 按 updatedAt 降序排列
-        await env.MY_KV_NAMESPACE.put(todosKey, JSON.stringify(existingTodos))
-        return new Response(JSON.stringify(existingTodos[index]), {
-          headers: { 'Content-Type': 'application/json' },
-        })
-      }
-      return new Response('Todo not found', { status: 404 })
+      // 更新单个任务（弃用）      
+      // return new Response('Todo not found', { status: 404 })
+      return new Response('请求参数错误', { status: 400 })
     }
   })
 }
 
 // 添加任务(弃用)
 export async function POST(request) {
-  return handleRequest(request, async (userId) => {
-    const { env } = getRequestContext()
-    const todo = await request.json()
-    const todosKey = `todos:${userId}`
-    const todos = JSON.parse(await env.MY_KV_NAMESPACE.get(todosKey) || '[]')
-    todos.push(todo)
-    await env.MY_KV_NAMESPACE.put(todosKey, JSON.stringify(todos))
-    return new Response(JSON.stringify(todo), {
-      headers: { 'Content-Type': 'application/json' },
-    })
-  })
+  return new Response('请求方法错误', { status: 405 })
+  // return handleRequest(request, async (userId) => {
+    
+  //   const { env } = getRequestContext()
+  //   const todo = await request.json()
+  //   const todosKey = `todos:${userId}`
+  //   const todos = JSON.parse(await env.MY_KV_NAMESPACE.get(todosKey) || '[]')
+  //   todos.push(todo)
+  //   await env.MY_KV_NAMESPACE.put(todosKey, JSON.stringify(todos))
+  //   return new Response(JSON.stringify(todo), {
+  //     headers: { 'Content-Type': 'application/json' },
+  //   })
+  // })
 }
 
 // 删除任务(弃用)
 export async function DELETE(request) {
-  return handleRequest(request, async (userId) => {
-    const { env } = getRequestContext()
-    const { id } = await request.json()
-    const todosKey = `todos:${userId}`
-    const todos = JSON.parse(await env.MY_KV_NAMESPACE.get(todosKey) || '[]')
-    const newTodos = todos.filter(t => t.id !== id)
-    await env.MY_KV_NAMESPACE.put(todosKey, JSON.stringify(newTodos))
-    return new Response('Todo permanently deleted', { status: 200 })
-  })
+  return new Response('请求方法错误', { status: 405 })
+  // return handleRequest(request, async (userId) => {
+  //   const { env } = getRequestContext()
+  //   const { id } = await request.json()
+  //   const todosKey = `todos:${userId}`
+  //   const todos = JSON.parse(await env.MY_KV_NAMESPACE.get(todosKey) || '[]')
+  //   const newTodos = todos.filter(t => t.id !== id)
+  //   await env.MY_KV_NAMESPACE.put(todosKey, JSON.stringify(newTodos))
+  //   return new Response('Todo permanently deleted', { status: 200 })
+  // })
 }
