@@ -21,6 +21,7 @@ Next Todo 是一个功能完整的待办事项管理应用，采用现代 Web �
 - 数据库：Cloudflare KV 
 - 认证：自定义邮箱认证、GitHub OAuth
 - 部署：Cloudflare Pages
+- 追求任务同步强一致性可选： Upstash Redis
 
 ## 本地开发
 
