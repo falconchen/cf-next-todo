@@ -26,7 +26,7 @@ export const appleWebApp = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="zh">
       <body className={inter.className} suppressHydrationWarning={true}>
         {children}
       </body>

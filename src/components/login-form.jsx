@@ -2,7 +2,7 @@
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Github, Mail } from "lucide-react"
+import { Github } from './icons/brands';
 import { RegistForm } from "./regist-form"
 
 export function LoginForm({

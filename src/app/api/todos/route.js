@@ -13,14 +13,14 @@ async function getUserId(request) {
   const userStr = await env.MY_KV_NAMESPACE.get(`session:${sessionToken}`)
   if (!userStr) {
     throw new Error('Invalid or expired session token')
-  }
+  } 
   const user = JSON.parse(userStr)
 
   if (user.loginMethod === 'password') {
     return `${user.loginMethod}#${user.username}`    
   } else {
-    return `${user.loginMethod}#${user.id}`
-  }
+    return `${user.loginMethod}#${user.id}`      
+  }      
 }
 
 async function handleRequest(request, handler) {
