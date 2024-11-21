@@ -37,10 +37,15 @@ async function getStorage(env) {
       },
       async put(key, value) {
         const prefix = env.UPSTASH_PREFIX ? `${env.UPSTASH_PREFIX}:` : ''
-        const response = await fetch(`${env.UPSTASH_REDIS_REST_URL}/set/${prefix}${key}/${value}`, {
-          headers: { Authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}` }
+        const response = await fetch(`${env.UPSTASH_REDIS_REST_URL}/set/${prefix}${key}`, {
+          method: 'POST',
+          body: value,
+          headers: { 
+            Authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}`,
+            
+          }
         })
-        
+        // console.log({response})
         if (!response.ok) throw new Error('Failed to set value in Redis')
       }
     }
